@@ -2,18 +2,22 @@
 
 import express from 'express';
 import cors from 'cors';
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Diagnostic Routes (Top Level - Resilience)
+app.get('/api/health', (req: any, res: any) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 import prisma from './utils/prisma';
 import authRoutes from './routes/auth.routes';
 import questionRoutes from './routes/question.routes';
 import flashcardRoutes from './routes/flashcard.routes';
 import planRoutes from './routes/plan.routes';
 import examRoutes from './routes/exam.routes';
-
-const app = express();
-const PORT = process.env.PORT || 3001;
-
-app.use(cors());
-app.use(express.json());
 
 // Diagnostic Routes (Before complex routes)
 app.get('/api/health', (req: any, res: any) => {

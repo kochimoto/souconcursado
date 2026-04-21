@@ -2,36 +2,36 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
-let prisma: PrismaClient;
+let _prisma: PrismaClient | null = null;
 
-const dbUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
+export const getPrisma = () => {
+  if (_prisma) return _prisma;
 
-if (!dbUrl) {
-  console.error('[PRISMA] DATABASE_URL or DIRECT_URL is not defined in environment variables!');
-}
+  const dbUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
 
-try {
-  console.log('[PRISMA] Initializing connection pool...');
-  const pool = new Pool({ 
-    connectionString: dbUrl,
-    ssl: {
-      rejectUnauthorized: false
-    }
-  });
+  try {
+    console.log('[PRISMA] Initializing Lazy Connection...');
+    const pool = new Pool({ 
+      connectionString: dbUrl,
+      ssl: {
+        rejectUnauthorized: false
+      }
+    });
 
-  const adapter = new PrismaPg(pool);
-  prisma = new PrismaClient({ 
-    adapter,
-    log: ['error', 'warn'] 
-  });
-  
-  console.log('[PRISMA] Prisma Client initialized successfully.');
-} catch (error: any) {
-  console.error('[PRISMA] Initialization FAILED:', error.message);
-  // Fallback para cliente sem adapter caso o erro seja no pool
-  prisma = new PrismaClient({
-    log: ['error', 'warn']
-  });
-}
+    const adapter = new PrismaPg(pool);
+    _prisma = new PrismaClient({ 
+      adapter,
+      log: ['error', 'warn'] 
+    });
+  } catch (error: any) {
+    console.error('[PRISMA] Initialization FAILED:', error.message);
+    _prisma = new PrismaClient({
+      log: ['error', 'warn']
+    });
+  }
 
+  return _prisma;
+};
+
+const prisma = getPrisma();
 export default prisma;
