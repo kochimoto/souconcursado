@@ -139,7 +139,7 @@ export default function FlashcardsPage() {
         <div className="space-y-1">
           <h1 className="text-3xl font-black italic tracking-tighter uppercase">Revisão Diária</h1>
           <div className="flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
-            <span className={cn(metaAtingida ? "text-green-500" : "text-primary")}>
+            <span className={metaAtingida ? "text-green-500" : "text-primary"}>
               Meta: {stats.todayReviews}/{stats.dailyGoal}
             </span>
             <span className="opacity-20">•</span>
