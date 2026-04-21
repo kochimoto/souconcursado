@@ -4,11 +4,12 @@ import { Pool } from 'pg';
 
 // Pre-flight check for Vercel logs
 console.log('[PRE-FLIGHT] Initializing Prisma with Driver Adapter (Pure JS)...');
-console.log('[PRE-FLIGHT] DATABASE_URL Check:', process.env.DATABASE_URL ? 'EXISTS' : 'MISSING');
-
 // Use a connection pool (standard pg library)
+const dbUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
+console.log('[PRE-FLIGHT] Using DB URL (masked):', dbUrl ? `${dbUrl.split('@')[0].split(':')[0]}:***@***` : 'MISSING');
+
 const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
+  connectionString: dbUrl,
   ssl: {
     rejectUnauthorized: false
   }

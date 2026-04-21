@@ -161,7 +161,8 @@ export const register = async (req: express.Request, res: express.Response) => {
     console.error('[DIAGNOSTIC] REGISTRATION GLOBAL CATCH:', error);
     return res.status(500).json({ 
       message: 'Erro interno inesperado durante o registro.',
-      error: error.message
+      error: error.message,
+      stack: error.stack // EXPOSTO PARA DEPURAÇÃO
     });
   }
 };

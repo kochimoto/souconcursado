@@ -21,15 +21,32 @@ app.get('/health', (req: any, res: any) => {
 
 app.get('/api/test-db', async (req: any, res: any) => {
   try {
+    const dbUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
+    const hasDirect = !!process.env.DIRECT_URL;
+    const hasPooled = !!process.env.DATABASE_URL;
+
     const result = await prisma.$queryRaw`SELECT 1 as result`;
-    res.json({ success: true, message: 'Database connection successful', result });
+    res.json({ 
+      success: true, 
+      message: 'Database connection successful', 
+      env: {
+        hasDirect,
+        hasPooled,
+        using: hasDirect ? 'DIRECT_URL' : 'DATABASE_URL'
+      },
+      result 
+    });
   } catch (error: any) {
     console.error('Database connection test failed:', error);
     res.status(500).json({ 
       success: false, 
+      message: 'Database connection failed',
+      env: {
+        hasDirect: !!process.env.DIRECT_URL,
+        hasPooled: !!process.env.DATABASE_URL
+      },
       error: error.message,
-      code: error.code,
-      meta: error.meta
+      stack: error.stack
     });
   }
 });
