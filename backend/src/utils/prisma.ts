@@ -10,7 +10,7 @@ export const getPrisma = () => {
   const dbUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
 
   try {
-    console.log('[PRISMA] Initializing Lazy Connection...');
+    console.log('[PRISMA] Initializing Adapter Connection...');
     const pool = new Pool({ 
       connectionString: dbUrl,
       ssl: {
@@ -18,13 +18,16 @@ export const getPrisma = () => {
       }
     });
 
-    const adapter = new PrismaPg(pool);
+    // Usando cast para 'any' para evitar conflito de tipos entre @types/pg e o esperado pelo adaptador
+    const adapter = new PrismaPg(pool as any);
+    
     _prisma = new PrismaClient({ 
-      adapter,
+      adapter: adapter as any,
       log: ['error', 'warn'] 
     });
   } catch (error: any) {
-    console.error('[PRISMA] Initialization FAILED:', error.message);
+    console.error('[PRISMA] Adapter Initialization FAILED:', error.message);
+    // Fallback para cliente padrão se o adaptador falhar
     _prisma = new PrismaClient({
       log: ['error', 'warn']
     });
@@ -33,6 +36,7 @@ export const getPrisma = () => {
   return _prisma;
 };
 
+// Proxy para garantir inicialização preguiçosa sem quebrar as importações estáticas
 const prisma = new Proxy({} as PrismaClient, {
   get: (target, prop) => {
     const instance = getPrisma();
