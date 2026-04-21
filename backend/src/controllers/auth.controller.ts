@@ -1,3 +1,5 @@
+import { Request, Response } from 'express';
+import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma';
 import { generateAIDataForExam } from '../services/aiService';
@@ -27,7 +29,7 @@ export const register = async (req: Request, res: Response) => {
         alreadyTaken: Boolean(alreadyTaken),
         targetExam,
         howFound,
-        subjectLevels: subjectLevels || {}
+        subjectLevels: (subjectLevels as any) || {}
       }
     });
 
@@ -50,7 +52,7 @@ export const register = async (req: Request, res: Response) => {
           area: 'Geral',
           level: 'Superior',
           status: 'Previsto',
-          subjects: aiData.subjects
+          subjects: aiData.subjects as any
         }
       });
       examId = newExam.id;
@@ -80,8 +82,8 @@ export const register = async (req: Request, res: Response) => {
       data: {
         userId: user.id,
         examId,
-        contentBlocks,
-        weeklySchedule,
+        contentBlocks: contentBlocks as any,
+        weeklySchedule: weeklySchedule as any,
         status: 'ACTIVE',
         progress: 0
       }
