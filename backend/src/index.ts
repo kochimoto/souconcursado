@@ -24,6 +24,21 @@ app.get('/health', (req: any, res: any) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.get('/api/test-db', async (req: any, res: any) => {
+  try {
+    const result = await prisma.$queryRaw`SELECT 1 as result`;
+    res.json({ success: true, message: 'Database connection successful', result });
+  } catch (error: any) {
+    console.error('Database connection test failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      code: error.code,
+      meta: error.meta
+    });
+  }
+});
+
 // For local development
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {

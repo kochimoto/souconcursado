@@ -110,7 +110,8 @@ export const register = async (req: Request, res: Response) => {
     }
     res.status(500).json({ 
       message: 'Erro ao criar conta.',
-      debug: process.env.NODE_ENV !== 'production' ? error.message : undefined 
+      error: error.message,
+      debug: error
     });
   }
 };
