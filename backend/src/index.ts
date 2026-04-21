@@ -3,7 +3,8 @@ import cors from 'cors';
 
 const app = express();
 app.use(cors({
-  origin: '*',
+  origin: 'https://souconcursado-theta.vercel.app',
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
