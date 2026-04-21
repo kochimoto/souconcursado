@@ -149,7 +149,7 @@ export default function FlashcardsPage() {
         
         <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden max-w-[200px]">
           <div 
-            className={cn("h-full transition-all duration-1000", metaAtingida ? "bg-green-500" : "bg-primary")}
+            className={`h-full transition-all duration-1000 ${metaAtingida ? "bg-green-500" : "bg-primary"}`}
             style={{ width: `${Math.min(100, (stats.todayReviews / stats.dailyGoal) * 100)}%` }}
           />
         </div>
