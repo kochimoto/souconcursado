@@ -1,17 +1,18 @@
-import { Router } from 'express';
 import {
   getFlashcards,
   getAllFlashcards,
   updateFlashcard,
   createFlashcard,
+  getFlashcardStats,
 } from '../controllers/flashcard.controller';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
 
-router.get('/due', authenticateToken, getFlashcards);       // apenas vencidos (para revisão)
-router.get('/', authenticateToken, getAllFlashcards);        // todos
-router.post('/', authenticateToken, createFlashcard);       // criar novo
-router.patch('/review', authenticateToken, updateFlashcard); // avaliar (SM-2)
+router.get('/due', authenticateToken, getFlashcards);
+router.get('/stats', authenticateToken, getFlashcardStats);
+router.get('/', authenticateToken, getAllFlashcards);
+router.post('/', authenticateToken, createFlashcard);
+router.patch('/review', authenticateToken, updateFlashcard);
 
 export default router;
