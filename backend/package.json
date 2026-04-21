@@ -8,8 +8,8 @@
   },
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "PRISMA_CLIENT_ENGINE_TYPE=library prisma generate",
-    "postinstall": "PRISMA_CLIENT_ENGINE_TYPE=library prisma generate",
+    "build": "PRISMA_GENERATE_DATAPROXY=false PRISMA_CLIENT_ENGINE_TYPE=library prisma generate",
+    "postinstall": "PRISMA_GENERATE_DATAPROXY=false PRISMA_CLIENT_ENGINE_TYPE=library prisma generate",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
