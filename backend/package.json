@@ -2,7 +2,10 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.ts",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "prisma generate",
