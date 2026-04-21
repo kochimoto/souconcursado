@@ -48,7 +48,7 @@ export const submitAttempt = async (req: express.Request, res: express.Response)
     const userId = (req as any).user?.id ?? (req as any).userId;
     const { questionId, chosenOption } = req.body;
 
-    const question = await prisma.question.findUnique({ where: { id: questionId } });
+    const question = await prisma.question.findUnique({ where: { id: String(questionId) } });
     if (!question) {
       return res.status(404).json({ message: 'Question not found' });
     }

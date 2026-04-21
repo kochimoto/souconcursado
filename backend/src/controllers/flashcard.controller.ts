@@ -41,7 +41,7 @@ export const updateFlashcard = async (req: express.Request, res: express.Respons
   try {
     const { id, rating } = req.body; // rating: 'easy' | 'medium' | 'hard'
 
-    const flashcard = await prisma.flashcard.findUnique({ where: { id } });
+    const flashcard = await prisma.flashcard.findUnique({ where: { id: String(id) } });
     if (!flashcard) return res.status(404).json({ message: 'Flashcard not found' });
 
     let { interval, easeFactor, reps } = flashcard;
@@ -66,7 +66,7 @@ export const updateFlashcard = async (req: express.Request, res: express.Respons
     nextReview.setDate(nextReview.getDate() + Math.max(1, interval));
 
     const updated = await prisma.flashcard.update({
-      where: { id },
+      where: { id: String(id) },
       data: { interval, easeFactor, reps, nextReview },
     });
 

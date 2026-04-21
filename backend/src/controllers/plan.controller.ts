@@ -140,7 +140,7 @@ export const getPlanById = async (req: express.Request, res: express.Response) =
     const userId = (req as any).user.id;
 
     const plan = await prisma.studyPlan.findFirst({
-      where: { id, userId },
+      where: { id: String(id), userId },
       include: { exam: true },
     });
 
@@ -161,7 +161,7 @@ export const updatePlanProgress = async (req: express.Request, res: express.Resp
     const { contentBlocks, progress } = req.body;
 
     const updatedPlan = await prisma.studyPlan.update({
-      where: { id },
+      where: { id: String(id) },
       data: { 
         contentBlocks: contentBlocks as any, 
         progress: progress as any 
@@ -180,7 +180,7 @@ export const syncPlanProgress = async (req: express.Request, res: express.Respon
     const userId = (req as any).user.id;
 
     const plan = await prisma.studyPlan.findFirst({
-      where: { id, userId },
+      where: { id: String(id), userId },
       include: { exam: { include: { questions: true } } },
     });
 
@@ -240,7 +240,7 @@ export const syncPlanProgress = async (req: express.Request, res: express.Respon
     const progress = contentBlocks.length > 0 ? (doneBlocks / contentBlocks.length) * 100 : 0;
 
     const updated = await prisma.studyPlan.update({
-      where: { id },
+      where: { id: String(id) },
       data: { contentBlocks, progress },
     });
 
