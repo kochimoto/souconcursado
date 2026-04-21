@@ -18,9 +18,23 @@ export default function ExamsPage() {
   const [selectedExam, setSelectedExam] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
 
+  const [syncing, setSyncing] = useState(false);
+
   useEffect(() => {
     fetchExams();
   }, [filterState, filterArea]);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await api.post("/exams/sync");
+      await fetchExams();
+    } catch (error) {
+      console.error("Erro ao sincronizar:", error);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleGeneratePlan = async (examId: string) => {
     setGenerating(true);
@@ -41,7 +55,7 @@ export default function ExamsPage() {
   const fetchExams = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/questions/exams", {
+      const response = await api.get("/exams", {
         params: {
           state: filterState,
           area: filterArea
@@ -63,9 +77,20 @@ export default function ExamsPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Concursos Públicos</h1>
-        <p className="text-muted-foreground">Explore e filtre os editais mais relevantes do momento.</p>
+      <div className="flex items-end justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-black italic tracking-tighter uppercase">Concursos Públicos</h1>
+          <p className="text-muted-foreground font-medium italic">Editais reais monitorados em tempo integral.</p>
+        </div>
+        
+        <button 
+          onClick={handleSync}
+          disabled={syncing}
+          className="flex items-center gap-2 px-6 py-3 bg-muted rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-muted/80 transition-all border-2 border-border"
+        >
+          {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Landmark className="h-4 w-4" />}
+          {syncing ? "Sincronizando..." : "Sincronizar"}
+        </button>
       </div>
 
       {/* Filters */}

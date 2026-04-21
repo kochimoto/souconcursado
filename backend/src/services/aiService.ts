@@ -1,45 +1,35 @@
-import prisma from '../utils/prisma';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export interface GeneratedPlan {
-  subjects: string[];
-  description: string;
-  initialFlashcards: Array<{ front: string; back: string; cardType: string }>;
-}
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-/**
- * Mock AI Service to generate plan data based on the exam name
- */
-export async function generateAIDataForExam(examName: string): Promise<GeneratedPlan> {
-  const normalizedExam = examName.toLowerCase();
-  
-  // Basic mapping for popular exams
-  if (normalizedExam.includes('pf') || normalizedExam.includes('policia federal')) {
-    return {
-      subjects: ['Português', 'Informática', 'Direito Constitucional', 'Direito Administrativo', 'Contabilidade', 'Estatística'],
-      description: 'Plano focado no edital da Polícia Federal, com ênfase em Contabilidade e Informática.',
-      initialFlashcards: [
-        { front: 'Qual o objeto da contabilidade?', back: 'O Patrimônio.', cardType: 'classic' },
-        { front: 'O que é o Princípio da Legalidade na Adm. Pública?', back: 'O administrador só pode fazer o que a lei permite.', cardType: 'classic' }
-      ]
-    };
+export const generateAdaptiveQuestion = async (userLevel: number, topic: string) => {
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  const prompt = `
+    Você é um especialista em concursos públicos brasileiros.
+    Gere uma questão de múltipla escolha inédita sobre o tema: "${topic}".
+    O nível de dificuldade deve ser adaptado para um usuário de nível ${userLevel} (em uma escala de 1 a 10).
+    
+    A resposta deve estar em formato JSON rigoroso com a seguinte estrutura:
+    {
+      "title": "Título curto da questão",
+      "content": "O enunciado completo da questão",
+      "options": ["Opção A", "Opção B", "Opção C", "Opção D"],
+      "correctAnswer": "A opção exata que está correta",
+      "explanation": "Uma explicação detalhada do porquê esta opção está correta",
+      "difficulty": ${userLevel > 7 ? '"Difícil"' : userLevel > 4 ? '"Médio"' : '"Fácil"'},
+      "subject": "${topic}"
+    }
+  `;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    // Limpar markdown se houver
+    const jsonStr = text.replace(/```json|```/g, "").trim();
+    return JSON.parse(jsonStr);
+  } catch (error) {
+    console.error("Erro ao gerar questão com IA:", error);
+    throw new Error("Falha na geração de questão por IA");
   }
-  
-  if (normalizedExam.includes('prf') || normalizedExam.includes('rodoviaria')) {
-    return {
-      subjects: ['Português', 'Raciocínio Lógico', 'Informática', 'CTB (Trânsito)', 'Direito Constitucional', 'Direitos Humanos'],
-      description: 'Plano intensivo para PRF, com foco total no Código de Trânsito Brasileiro.',
-      initialFlashcards: [
-        { front: 'Velocidade máxima em rodovias de pista dupla não sinalizadas?', back: '110 km/h para veículos leves.', cardType: 'classic' }
-      ]
-    };
-  }
-
-  // Default fallback
-  return {
-    subjects: ['Português', 'Direito Administrativo', 'Direito Constitucional', 'Raciocínio Lógico', 'Informática'],
-    description: 'Plano de estudos base para concursos de nível médio e superior.',
-    initialFlashcards: [
-      { front: 'O que significa a sigla LIMPE no Direito Adm?', back: 'Legalidade, Impessoalidade, Moralidade, Publicidade e Eficiência.', cardType: 'classic' }
-    ]
-  };
-}
+};

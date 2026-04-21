@@ -9,21 +9,42 @@ import ClozeCard from "@/components/ClozeCard";
 export default function FlashcardsPage() {
   const [loading, setLoading] = useState(true);
   const [cards, setCards] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>({ todayReviews: 0, dailyGoal: 30, totalCards: 0 });
   const [isFlipped, setIsFlipped] = useState(false);
   const [currentCardIdx, setCurrentCardIdx] = useState(0);
   const [showRatings, setShowRatings] = useState(false);
+  const [sessionFinished, setSessionFinished] = useState(false);
 
   useEffect(() => {
-    fetchCards();
+    fetchInitialData();
   }, []);
 
-  const fetchCards = async () => {
+  const fetchInitialData = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/flashcards/due");
-      setCards(response.data);
+      const [dueRes, statsRes] = await Promise.all([
+        api.get("/flashcards/due"),
+        api.get("/flashcards/stats")
+      ]);
+      setCards(dueRes.data);
+      setStats(statsRes.data);
     } catch (error) {
-      console.error("Erro ao carregar flashcards:", error);
+      console.error("Erro ao carregar dados:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchExtraCards = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get("/flashcards/all");
+      // Filtra os que já foram revisados hoje (opcional, ou apenas pega todos)
+      setCards(response.data.slice(0, 30)); 
+      setSessionFinished(false);
+      setCurrentCardIdx(0);
+    } catch (error) {
+      console.error("Erro ao carregar extras:", error);
     } finally {
       setLoading(false);
     }
@@ -40,14 +61,18 @@ export default function FlashcardsPage() {
         rating
       });
       
+      // Update stats locally
+      setStats((prev: any) => ({ ...prev, todayReviews: prev.todayReviews + 1 }));
+
       // Advance to next card
       if (currentCardIdx < cards.length - 1) {
         setIsFlipped(false);
         setShowRatings(false);
         setCurrentCardIdx(prev => prev + 1);
       } else {
-        // Finished the session
+        // Finished the current stack
         setCards([]);
+        setSessionFinished(true);
       }
     } catch (error) {
       console.error("Erro ao salvar avaliação:", error);
@@ -63,33 +88,71 @@ export default function FlashcardsPage() {
     );
   }
 
+  const metaAtingida = stats.todayReviews >= stats.dailyGoal;
+
   if (cards.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center space-y-6">
-        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-          <Sparkles className="h-10 w-10 text-primary" />
+        <div className="relative">
+          <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center">
+            {metaAtingida ? <Sparkles className="h-12 w-12 text-primary" /> : <Zap className="h-12 w-12 text-yellow-500" />}
+          </div>
+          <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-[10px] font-black px-2 py-1 rounded-full border-2 border-background">
+            {stats.todayReviews}/{stats.dailyGoal}
+          </div>
         </div>
+        
         <div className="space-y-2">
-          <h2 className="text-3xl font-black">Meta Batida!</h2>
+          <h2 className="text-3xl font-black">{metaAtingida ? "Meta Batida!" : "Quase lá!"}</h2>
           <p className="text-muted-foreground font-medium max-w-sm">
-            Você não tem cartões para revisar no momento. Volte amanhã ou crie novos cartões.
+            {metaAtingida 
+              ? "Você atingiu sua meta diária de 30 cartões! Conhecimento consolidado com sucesso." 
+              : `Você revisou ${stats.todayReviews} cartões hoje. Sua meta é chegar em ${stats.dailyGoal}.`}
           </p>
         </div>
-        <button 
-          onClick={() => window.location.href = "/dashboard"}
-          className="px-8 py-3 bg-primary text-primary-foreground rounded-2xl font-black shadow-xl shadow-primary/20 hover:scale-105 transition-all"
-        >
-          Voltar ao Dashboard
-        </button>
+
+        <div className="flex flex-col gap-3 w-full max-w-xs">
+          {!metaAtingida && stats.totalCards > stats.todayReviews && (
+            <button 
+              onClick={fetchExtraCards}
+              className="w-full px-8 py-4 bg-primary text-primary-foreground rounded-2xl font-black shadow-xl shadow-primary/20 hover:scale-105 transition-all flex items-center justify-center gap-2"
+            >
+              <Zap className="h-5 w-5" />
+              Praticar Novos Cartões
+            </button>
+          )}
+          
+          <button 
+            onClick={() => window.location.href = "/dashboard"}
+            className="w-full px-8 py-4 bg-muted text-muted-foreground rounded-2xl font-black hover:bg-muted/80 transition-all"
+          >
+            Voltar ao Dashboard
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-12 animate-fade-in text-center">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-black italic tracking-tighter uppercase">Revisão Diária</h1>
-        <p className="text-muted-foreground font-bold">Consolidando conhecimento com Repetição Espaçada</p>
+      <div className="flex flex-col items-center gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-black italic tracking-tighter uppercase">Revisão Diária</h1>
+          <div className="flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
+            <span className={cn(metaAtingida ? "text-green-500" : "text-primary")}>
+              Meta: {stats.todayReviews}/{stats.dailyGoal}
+            </span>
+            <span className="opacity-20">•</span>
+            <span>Total: {stats.totalCards} cards</span>
+          </div>
+        </div>
+        
+        <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden max-w-[200px]">
+          <div 
+            className={cn("h-full transition-all duration-1000", metaAtingida ? "bg-green-500" : "bg-primary")}
+            style={{ width: `${Math.min(100, (stats.todayReviews / stats.dailyGoal) * 100)}%` }}
+          />
+        </div>
       </div>
 
       {/* Card Container */}

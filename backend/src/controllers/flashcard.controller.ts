@@ -67,12 +67,47 @@ export const updateFlashcard = async (req: express.Request, res: express.Respons
 
     const updated = await prisma.flashcard.update({
       where: { id: String(id) },
-      data: { interval, easeFactor, reps, nextReview },
+      data: { 
+        interval, 
+        easeFactor, 
+        reps, 
+        nextReview,
+        lastReviewedAt: new Date()
+      },
     });
 
     res.json({ ...updated, nextReviewDays: Math.max(1, interval) });
   } catch (error) {
     res.status(500).json({ message: 'Error updating flashcard' });
+  }
+};
+
+export const getFlashcardStats = async (req: express.Request, res: express.Response) => {
+  try {
+    const userId = (req as any).user?.id ?? (req as any).userId;
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const todayReviews = await prisma.flashcard.count({
+      where: {
+        userId,
+        lastReviewedAt: {
+          gte: startOfDay,
+        },
+      },
+    });
+
+    const totalCards = await prisma.flashcard.count({
+      where: { userId },
+    });
+
+    res.json({
+      todayReviews,
+      dailyGoal: 30,
+      totalCards,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching stats' });
   }
 };
 

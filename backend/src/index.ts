@@ -57,6 +57,17 @@ app.use('/api/questions', questionRoutes);
 app.use('/api/flashcards', flashcardRoutes);
 app.use('/api/plans', planRoutes);
 
+app.get("/api/questions", authMiddleware, questionController.getQuestions);
+app.get("/api/questions/adaptive", authMiddleware, questionController.getAdaptiveQuestion);
+app.post("/api/questions/submit", authMiddleware, questionController.submitAnswer);
+app.get("/api/exams", authMiddleware, questionController.getExams);
+app.post("/api/exams/sync", authMiddleware, questionController.syncExams);
+app.get("/api/flashcards/due", authMiddleware, flashcardController.getFlashcards);
+app.get("/api/flashcards/all", authMiddleware, flashcardController.getAllFlashcards);
+app.get("/api/flashcards/stats", authMiddleware, flashcardController.getFlashcardStats);
+app.patch("/api/flashcards/review", authMiddleware, flashcardController.updateFlashcard);
+app.post("/api/flashcards", authMiddleware, flashcardController.createFlashcard);
+
 // For local development
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {

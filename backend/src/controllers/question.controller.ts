@@ -1,5 +1,53 @@
-import express from 'express';
-import prisma from '../utils/prisma';
+import { generateAdaptiveQuestion } from '../services/aiService';
+import { syncExamsFromPCI } from '../services/examMonitorService';
+
+export const syncExams = async (req: express.Request, res: express.Response) => {
+  try {
+    const result = await syncExamsFromPCI();
+    res.json({ message: 'Sincronização concluída', count: result.count });
+  } catch (error) {
+    console.error('Erro no syncExams:', error);
+    res.status(500).json({ message: 'Falha na sincronização de concursos' });
+  }
+};
+
+export const getAdaptiveQuestion = async (req: express.Request, res: express.Response) => {
+  try {
+    const userId = (req as any).user?.id ?? (req as any).userId;
+    const { topic } = req.query;
+
+    // Buscar nível do usuário (simulado ou do perfil)
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const userLevel = (user as any)?.level || 1;
+
+    const aiQuestion = await generateAdaptiveQuestion(userLevel, topic as string || 'Direito Constitucional');
+
+    // Encontrar o índice da resposta correta
+    const correctOptionIndex = aiQuestion.options.findIndex((opt: string) => opt === aiQuestion.correctAnswer);
+
+    const savedQuestion = await prisma.question.create({
+      data: {
+        title: aiQuestion.title,
+        content: aiQuestion.content,
+        options: aiQuestion.options,
+        correctAnswer: aiQuestion.correctAnswer, 
+        explanation: aiQuestion.explanation,
+        difficulty: aiQuestion.difficulty,
+        subject: aiQuestion.subject,
+      }
+    });
+
+    // Retorna com os campos esperados pelo frontend
+    res.json({
+      ...savedQuestion,
+      text: savedQuestion.content, // Frontend espera 'text'
+      correctOption: correctOptionIndex === -1 ? 0 : correctOptionIndex // Frontend espera 'correctOption'
+    });
+  } catch (error) {
+    console.error('Erro em getAdaptiveQuestion:', error);
+    res.status(500).json({ message: 'Falha ao gerar questão adaptativa' });
+  }
+};
 
 export const getQuestions = async (req: express.Request, res: express.Response) => {
   try {

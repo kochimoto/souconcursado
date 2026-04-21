@@ -1,64 +1,145 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, XCircle, Info, ArrowRight, BookOpen, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, Info, ArrowRight, BookOpen, Clock, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const sampleQuestion = {
-  id: "1",
-  text: "No que se refere aos direitos e garantias fundamentais previstos na Constituição Federal de 1988, assinale a opção correta:",
-  options: [
-    "O direito à vida é absoluto, não comportando exceções mesmo em caso de guerra declarada.",
-    "A casa é asilo inviolável do indivíduo, ninguém nela podendo penetrar sem consentimento do morador, salvo em caso de flagrante delito ou desastre.",
-    "A lei penal retroagirá sempre para beneficiar ou prejudicar o réu.",
-    "É livre a manifestação do pensamento, sendo permitido o anonimato."
-  ],
-  correct: 1,
-  explanation: "O Art. 5º, XI da CF/88 estabelece que a casa é asilo inviolável, permitindo a entrada sem consentimento apenas em casos específicos como flagrante delito, desastre, prestação de socorro ou, durante o dia, por determinação judicial."
-};
+import api from "@/lib/api";
 
 export default function StudyPage() {
+  const [loading, setLoading] = useState(true);
+  const [question, setQuestion] = useState<any>(null);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [isAIMode, setIsAIMode] = useState(false);
 
-  const handleSubmit = () => {
-    if (selectedOption !== null) {
-      setIsSubmitted(true);
+  useEffect(() => {
+    fetchQuestion();
+  }, []);
+
+  const fetchQuestion = async () => {
+    setLoading(true);
+    setQuestion(null);
+    setSelectedOption(null);
+    setIsSubmitted(false);
+    setShowExplanation(false);
+    
+    try {
+      const endpoint = isAIMode ? "/questions/adaptive" : "/questions";
+      const params = isAIMode ? { topic: "Direito Constitucional" } : { limit: 1 };
+      
+      const response = await api.get(endpoint, { params });
+      
+      if (isAIMode) {
+        setQuestion(response.data);
+      } else if (response.data && response.data.length > 0) {
+        setQuestion(response.data[0]);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar questão:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const isCorrect = selectedOption === sampleQuestion.correct;
+  const handleSubmit = async () => {
+    if (selectedOption !== null && question) {
+      try {
+        await api.post("/questions/attempt", {
+          questionId: question.id,
+          chosenOption: selectedOption
+        });
+        setIsSubmitted(true);
+      } catch (error) {
+        console.error("Erro ao enviar resposta:", error);
+        setIsSubmitted(true);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="h-10 w-10 text-primary animate-spin" />
+        <p className="font-bold text-muted-foreground italic">
+          {isAIMode ? "Gemini está gerando sua questão adaptativa..." : "Buscando próxima questão..."}
+        </p>
+      </div>
+    );
+  }
+
+  if (!question) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 gap-4">
+        <p className="text-xl font-bold">Nenhuma questão encontrada.</p>
+        <button 
+          onClick={fetchQuestion}
+          className="px-6 py-2 bg-primary text-primary-foreground rounded-full font-bold"
+        >
+          Tentar Novamente
+        </button>
+      </div>
+    );
+  }
+
+  const isCorrect = selectedOption === question.correctOption;
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-8 animate-fade-in">
-      <div className="flex items-center justify-between border-b pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b pb-8">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <BookOpen className="h-5 w-5 text-primary" />
+          <div className="p-3 bg-primary/10 rounded-2xl">
+            <BookOpen className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Direito Constitucional</h1>
-            <p className="text-sm text-muted-foreground underline">TRE-Unificado / FGV</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-black italic tracking-tighter uppercase">{question.subject}</h1>
+              {question.id.startsWith('ai_') || isAIMode && (
+                <span className="flex items-center gap-1 px-2 py-0.5 bg-indigo-500/10 text-indigo-600 text-[9px] font-black uppercase rounded-full border border-indigo-500/20">
+                  <Sparkles className="h-2 w-2" />
+                  Gerado por IA
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest opacity-60">
+              {question.exam?.name || "Banco de Questões"} • {question.exam?.organization || "Geral"}
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <Clock className="h-4 w-4" />
-          Questão 1 de 20
+
+        <div className="flex items-center gap-4">
+           {/* IA Toggle */}
+          <button 
+            onClick={() => setIsAIMode(!isAIMode)}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all font-black text-[10px] uppercase tracking-widest",
+              isAIMode ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "bg-card border-border text-muted-foreground hover:border-primary/30"
+            )}
+          >
+            <Sparkles className={cn("h-3 w-3", isAIMode ? "animate-pulse" : "")} />
+            Modo IA {isAIMode ? "ON" : "OFF"}
+          </button>
+
+          <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            {question.difficulty}
+          </div>
         </div>
       </div>
 
       <div className="space-y-8">
         <div className="p-8 bg-card border rounded-[2rem] shadow-sm">
-          <span className="inline-block px-3 py-1 mb-4 text-[10px] font-bold uppercase tracking-widest bg-muted rounded-full">Questão 42193</span>
-          <p className="text-lg md:text-xl font-medium leading-relaxed">{sampleQuestion.text}</p>
+          <span className="inline-block px-3 py-1 mb-4 text-[10px] font-bold uppercase tracking-widest bg-muted rounded-full">
+            Questão {question.id.split('-')[0].toUpperCase()}
+          </span>
+          <p className="text-lg md:text-xl font-medium leading-relaxed">{question.text}</p>
         </div>
 
         <div className="space-y-3">
-          {sampleQuestion.options.map((option, index) => {
+          {(question.options as string[]).map((option, index) => {
             const isSelected = selectedOption === index;
-            const isCorrectOption = index === sampleQuestion.correct;
+            const isCorrectOption = index === question.correctOption;
             
             let statusClasses = "border-border hover:border-primary/50 bg-card";
             if (isSubmitted) {
@@ -120,7 +201,10 @@ export default function StudyPage() {
           </div>
 
           {isSubmitted && (
-            <button className="flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-full font-bold shadow-xl shadow-blue-500/20 hover:scale-105 transition-all">
+            <button 
+              onClick={fetchQuestion}
+              className="flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-full font-bold shadow-xl shadow-blue-500/20 hover:scale-105 transition-all"
+            >
               Próxima Questão
               <ArrowRight className="h-5 w-5" />
             </button>
@@ -140,7 +224,7 @@ export default function StudyPage() {
                 Dica do Professor
               </h4>
               <p className="text-muted-foreground leading-relaxed text-sm md:text-base italic">
-                {sampleQuestion.explanation}
+                {question.explanation || "Sem comentário disponível para esta questão."}
               </p>
             </motion.div>
           )}
@@ -149,3 +233,4 @@ export default function StudyPage() {
     </div>
   );
 }
+
