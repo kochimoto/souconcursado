@@ -16,7 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 // Diagnostic Routes (Before complex routes)
-app.get('/health', (req: any, res: any) => {
+app.get('/api/health', (req: any, res: any) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
