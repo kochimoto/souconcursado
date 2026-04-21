@@ -8,48 +8,81 @@ import { computeSubjectPriority, buildWeeklySchedule } from '../services/studyPl
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export const register = async (req: express.Request, res: express.Response) => {
-  console.log('[DEBUG] Registration started for:', req.body.email);
   try {
+    // DIAGNÓSTICO: Log do payload de entrada
+    console.log('[DIAGNOSTIC] Register Request Body:', JSON.stringify({
+      ...req.body,
+      password: '[PROTECTED]'
+    }));
+
     const { email, password, name, age, city, state, alreadyTaken, targetExam, howFound, subjectLevels } = req.body;
 
+    if (!email || !password || !name) {
+      console.warn('[DIAGNOSTIC] Missing mandatory fields');
+      return res.status(400).json({ message: 'E-mail, nome e senha são obrigatórios.' });
+    }
+
     // 1. Check existing user
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    let existingUser;
+    try {
+      existingUser = await prisma.user.findUnique({ where: { email } });
+    } catch (checkError: any) {
+      console.error('[DIAGNOSTIC] prisma.user.findUnique failed:', checkError);
+      throw new Error(`Erro ao verificar e-mail: ${checkError.message}`);
+    }
+
     if (existingUser) {
-      console.log('[DEBUG] User already exists:', email);
+      console.log('[DIAGNOSTIC] User already exists:', email);
       return res.status(400).json({ message: 'Este e-mail já está em uso.' });
     }
 
     // 2. Hash password
-    console.log('[DEBUG] Hashing password...');
-    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log('[DIAGNOSTIC] Hashing password...');
+    let hashedPassword;
+    try {
+      hashedPassword = await bcrypt.hash(password, 10);
+    } catch (hashError: any) {
+      console.error('[DIAGNOSTIC] bcrypt hash error:', hashError);
+      throw new Error('Erro ao processar segurança da senha.');
+    }
 
     // 3. Create User
-    console.log('[DEBUG] Creating user in DB...');
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-        age: age ? parseInt(age) : null,
-        city,
-        state,
-        alreadyTaken: Boolean(alreadyTaken),
-        targetExam,
-        howFound,
-        subjectLevels: (subjectLevels as any) || {}
-      }
-    });
-    console.log('[DEBUG] User created successfully, ID:', user.id);
-
-    // 4. (NEW/DEFENSIVE) Generate Automatic Study Plan
+    console.log('[DIAGNOSTIC] Creating user in DB with standardized fields...');
+    let user;
     try {
-      console.log('[DEBUG] Starting Automatic Study Plan generation for:', targetExam || 'Geral');
-      const aiData = await generateAIDataForExam(targetExam || 'Concurso Geral');
+      user = await prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          name,
+          age: age ? (typeof age === 'string' ? parseInt(age) : age) : null,
+          city: city || null,
+          state: state || null,
+          alreadyTaken: Boolean(alreadyTaken),
+          targetExam: targetExam || null,
+          howFound: howFound || null,
+          subjectLevels: subjectLevels || {}
+        }
+      });
+      console.log('[DIAGNOSTIC] User created successfully, ID:', user.id);
+    } catch (dbError: any) {
+      console.error('[DIAGNOSTIC] prisma.user.create FATAL ERROR:', dbError);
+      return res.status(500).json({ 
+        message: 'Erro técnico ao salvar sua conta no banco de dados.',
+        error: dbError.message,
+        code: dbError.code
+      });
+    }
+
+    // 4. (DEFENSIVE) Generate Automatic Study Plan
+    try {
+      const planExamName = targetExam || 'Plano Personalizado';
+      console.log('[DIAGNOSTIC] Starting Plan generation for:', planExamName);
+      const aiData = await generateAIDataForExam(planExamName);
       
-      // Create or find Exam
       let examId = '';
       const existingExam = await prisma.exam.findFirst({
-        where: { name: targetExam }
+        where: { name: planExamName }
       });
 
       if (existingExam) {
@@ -57,7 +90,7 @@ export const register = async (req: express.Request, res: express.Response) => {
       } else {
         const newExam = await prisma.exam.create({
           data: {
-            name: targetExam || 'Plano Personalizado',
+            name: planExamName,
             organization: 'Diversas',
             area: 'Geral',
             level: 'Superior',
@@ -68,7 +101,6 @@ export const register = async (req: express.Request, res: express.Response) => {
         examId = newExam.id;
       }
 
-      // Compute priorities and schedule
       const examSubjectsList = aiData.subjects.map(s => ({
         subject: s,
         questionCount: 10,
@@ -88,7 +120,6 @@ export const register = async (req: express.Request, res: express.Response) => {
         hoursSpent: 0
       }));
 
-      console.log('[DEBUG] Saving Study Plan to DB...');
       await prisma.studyPlan.create({
         data: {
           userId: user.id,
@@ -100,8 +131,6 @@ export const register = async (req: express.Request, res: express.Response) => {
         }
       });
 
-      // Generate Initial Flashcards
-      console.log('[DEBUG] Generating initial flashcards...');
       for (const card of aiData.initialFlashcards) {
         await prisma.flashcard.create({
           data: {
@@ -112,34 +141,27 @@ export const register = async (req: express.Request, res: express.Response) => {
           }
         });
       }
-      console.log('[DEBUG] Study plan and flashcards generated successfully.');
+      console.log('[DIAGNOSTIC] Study plan and flashcards generated.');
 
     } catch (planError: any) {
-      // NON-BLOCKING ERROR: We don't crash registration if plan generation fails
-      console.error('[CRITICAL-WARNING] Study Plan generation failed, but user was created:', planError);
+      console.error('[DIAGNOSTIC-NON-FATAL] Study Plan generation failed:', planError);
     }
 
     // 5. Generate Token and Respond
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
-    console.log('[DEBUG] Registration complete, sending response.');
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '30d' });
+    console.log('[DIAGNOSTIC] Registration successful, responding.');
 
-    res.status(201).json({ 
+    return res.status(201).json({ 
       token, 
       user: { id: user.id, name: user.name, email: user.email },
       message: 'Conta criada com sucesso!'
     });
 
   } catch (error: any) {
-    console.error('[ERROR] REGISTRATION FATAL ERROR:', error);
-    
-    if (error.code === 'P2002') {
-      return res.status(400).json({ message: 'Este e-mail já está em uso.' });
-    }
-
-    res.status(500).json({ 
-      message: 'Erro ao criar conta.',
-      error: error.message,
-      code: error.code
+    console.error('[DIAGNOSTIC] REGISTRATION GLOBAL CATCH:', error);
+    return res.status(500).json({ 
+      message: 'Erro interno inesperado durante o registro.',
+      error: error.message
     });
   }
 };

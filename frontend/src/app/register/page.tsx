@@ -47,10 +47,16 @@ export default function RegisterPage() {
 
     try {
       const response = await api.post("/auth/register", {
-        ...formData,
+        email: formData.email,
+        password: formData.password,
+        name: formData.name,
+        city: formData.city,
+        state: formData.state,
         targetExam: finalExam,
         alreadyTaken: formData.alreadyTaken === "Sim",
-        subjectLevels
+        age: (formData as any).age || null,
+        howFound: (formData as any).howFound || null,
+        subjectLevels: subjectLevels || {}
       });
       login(response.data.token, response.data.user);
     } catch (err: any) {
