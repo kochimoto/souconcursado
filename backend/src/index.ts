@@ -3,6 +3,10 @@
 import express from 'express';
 import cors from 'cors';
 import prisma from './utils/prisma';
+import authRoutes from './routes/auth.routes';
+import questionRoutes from './routes/question.routes';
+import flashcardRoutes from './routes/flashcard.routes';
+import planRoutes from './routes/plan.routes';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
