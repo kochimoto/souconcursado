@@ -22,7 +22,7 @@ export const getQuestions = async (req: express.Request, res: express.Response) 
   }
 };
 
-export const getExams = async (req: Request, res: Response) => {
+export const getExams = async (req: express.Request, res: express.Response) => {
   try {
     const { state, area, level, status } = req.query;
 
@@ -43,7 +43,7 @@ export const getExams = async (req: Request, res: Response) => {
   }
 };
 
-export const submitAttempt = async (req: Request, res: Response) => {
+export const submitAttempt = async (req: express.Request, res: express.Response) => {
   try {
     const userId = (req as any).user?.id ?? (req as any).userId;
     const { questionId, chosenOption } = req.body;
@@ -101,7 +101,7 @@ export const submitAttempt = async (req: Request, res: Response) => {
   }
 };
 
-export const getSubjectStats = async (req: Request, res: Response) => {
+export const getSubjectStats = async (req: express.Request, res: express.Response) => {
   try {
     const userId = (req as any).user?.id ?? (req as any).userId;
 

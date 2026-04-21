@@ -105,8 +105,8 @@ export const generatePlan = async (req: express.Request, res: express.Response) 
       data: {
         userId,
         examId,
-        contentBlocks,
-        weeklySchedule,
+        contentBlocks: contentBlocks as any,
+        weeklySchedule: weeklySchedule as any,
         status: 'ACTIVE',
         progress: 0,
       },
@@ -120,7 +120,7 @@ export const generatePlan = async (req: express.Request, res: express.Response) 
   }
 };
 
-export const getMyPlans = async (req: Request, res: Response) => {
+export const getMyPlans = async (req: express.Request, res: express.Response) => {
   try {
     const userId = (req as any).user.id;
     const plans = await prisma.studyPlan.findMany({
@@ -134,7 +134,7 @@ export const getMyPlans = async (req: Request, res: Response) => {
   }
 };
 
-export const getPlanById = async (req: Request, res: Response) => {
+export const getPlanById = async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
     const userId = (req as any).user.id;
@@ -155,14 +155,17 @@ export const getPlanById = async (req: Request, res: Response) => {
   }
 };
 
-export const updatePlanProgress = async (req: Request, res: Response) => {
+export const updatePlanProgress = async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
     const { contentBlocks, progress } = req.body;
 
     const updatedPlan = await prisma.studyPlan.update({
       where: { id },
-      data: { contentBlocks, progress },
+      data: { 
+        contentBlocks: contentBlocks as any, 
+        progress: progress as any 
+      },
     });
 
     res.json(updatedPlan);
@@ -171,7 +174,7 @@ export const updatePlanProgress = async (req: Request, res: Response) => {
   }
 };
 
-export const syncPlanProgress = async (req: Request, res: Response) => {
+export const syncPlanProgress = async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
     const userId = (req as any).user.id;

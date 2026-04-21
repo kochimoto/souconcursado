@@ -21,7 +21,7 @@ export const getFlashcards = async (req: express.Request, res: express.Response)
   }
 };
 
-export const getAllFlashcards = async (req: Request, res: Response) => {
+export const getAllFlashcards = async (req: express.Request, res: express.Response) => {
   try {
     const userId = (req as any).user?.id ?? (req as any).userId;
 
@@ -37,7 +37,7 @@ export const getAllFlashcards = async (req: Request, res: Response) => {
   }
 };
 
-export const updateFlashcard = async (req: Request, res: Response) => {
+export const updateFlashcard = async (req: express.Request, res: express.Response) => {
   try {
     const { id, rating } = req.body; // rating: 'easy' | 'medium' | 'hard'
 
@@ -76,7 +76,7 @@ export const updateFlashcard = async (req: Request, res: Response) => {
   }
 };
 
-export const createFlashcard = async (req: Request, res: Response) => {
+export const createFlashcard = async (req: express.Request, res: express.Response) => {
   try {
     const userId = (req as any).user?.id ?? (req as any).userId;
     const { cardType, front, back, clozeText, clozeAnswers, questionId } = req.body;
@@ -88,7 +88,7 @@ export const createFlashcard = async (req: Request, res: Response) => {
         front,
         back,
         clozeText,
-        clozeAnswers,
+        clozeAnswers: (clozeAnswers as any) || [],
         questionId,
       },
     });
