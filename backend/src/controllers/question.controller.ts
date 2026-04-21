@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
+import express from 'express';
 import prisma from '../utils/prisma';
 
-export const getQuestions = async (req: Request, res: Response) => {
+export const getQuestions = async (req: express.Request, res: express.Response) => {
   try {
     const { subject, examId, difficulty, limit = '20', offset = '0' } = req.query;
 

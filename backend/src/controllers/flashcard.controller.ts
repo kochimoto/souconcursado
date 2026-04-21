@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
+import express from 'express';
 import prisma from '../utils/prisma';
 
-export const getFlashcards = async (req: Request, res: Response) => {
+export const getFlashcards = async (req: express.Request, res: express.Response) => {
   try {
     const userId = (req as any).user?.id ?? (req as any).userId;
     const now = new Date();

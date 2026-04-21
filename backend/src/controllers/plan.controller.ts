@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import express from 'express';
 import prisma from '../utils/prisma';
 import {
   computeSubjectPriority,
@@ -7,7 +7,7 @@ import {
   computeSubjectStats,
 } from '../services/studyPlanEngine';
 
-export const generatePlan = async (req: Request, res: Response) => {
+export const generatePlan = async (req: express.Request, res: express.Response) => {
   try {
     const { examId, hoursPerDay = 2 } = req.body;
     const userId = (req as any).user.id;

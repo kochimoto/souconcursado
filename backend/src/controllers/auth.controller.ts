@@ -1,5 +1,5 @@
-import { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
+import express from 'express';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma';
 import { generateAIDataForExam } from '../services/aiService';
@@ -7,7 +7,7 @@ import { computeSubjectPriority, buildWeeklySchedule } from '../services/studyPl
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-export const register = async (req: Request, res: Response) => {
+export const register = async (req: express.Request, res: express.Response) => {
   try {
     const { email, password, name, age, city, state, alreadyTaken, targetExam, howFound, subjectLevels } = req.body;
 
@@ -65,7 +65,7 @@ export const register = async (req: Request, res: Response) => {
       topics: []
     }));
 
-    const priorities = computeSubjectPriority(subjectLevels || {}, examSubjectsList);
+    const priorities = computeSubjectPriority((subjectLevels as any) || {}, examSubjectsList);
     const weeklySchedule = buildWeeklySchedule(priorities, null, 2);
 
     const contentBlocks = priorities.map(p => ({
@@ -118,7 +118,7 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: express.Request, res: express.Response) => {
   try {
     const { email, password } = req.body;
 
@@ -141,7 +141,7 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-export const getProfile = async (req: Request, res: Response) => {
+export const getProfile = async (req: express.Request, res: express.Response) => {
   try {
     const userId = (req as any).user.id;
     const user = await prisma.user.findUnique({
