@@ -1,5 +1,3 @@
-// Removed dotenv.config() for Vercel production
-
 import express from 'express';
 import cors from 'cors';
 
@@ -9,7 +7,11 @@ app.use(express.json());
 
 // Diagnostic Routes (Top Level - Resilience)
 app.get('/api/health', (req: any, res: any) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    team: 'Senior Master Team'
+  });
 });
 
 import prisma from './utils/prisma';
@@ -19,24 +21,15 @@ import flashcardRoutes from './routes/flashcard.routes';
 import planRoutes from './routes/plan.routes';
 import examRoutes from './routes/exam.routes';
 
-// Diagnostic Routes (Before complex routes)
-app.get('/api/health', (req: any, res: any) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memory: process.memoryUsage()
-  });
-});
-
+// Diagnostic Routes (Database)
 app.get('/api/test-db', async (req: any, res: any) => {
   console.log('[DIAGNOSTIC] DB Test requested');
   try {
     const start = Date.now();
-    const result = await prisma.$queryRaw`SELECT 1 as result`;
+    const result = await (prisma as any).$queryRaw`SELECT 1 as result`;
     const duration = Date.now() - start;
     
-    const count = await prisma.exam.count();
+    const count = await (prisma as any).exam.count();
     
     res.json({ 
       success: true, 
@@ -59,19 +52,18 @@ app.get('/api/test-db', async (req: any, res: any) => {
   }
 });
 
-// Routes
+// Main Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/flashcards', flashcardRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/exams', examRoutes);
 
-// For local development
+const PORT = process.env.PORT || 3001;
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 
-// Export for Vercel
 export default app;

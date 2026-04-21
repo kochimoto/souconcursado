@@ -33,5 +33,11 @@ export const getPrisma = () => {
   return _prisma;
 };
 
-const prisma = getPrisma();
+const prisma = new Proxy({} as PrismaClient, {
+  get: (target, prop) => {
+    const instance = getPrisma();
+    return (instance as any)[prop];
+  }
+});
+
 export default prisma;
