@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { BRAZILIAN_STATES, POPULAR_EXAMS } from "@/lib/data";
 
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
@@ -19,6 +20,8 @@ export default function RegisterPage() {
     city: "",
     state: "",
     targetExam: "",
+    selectedExam: POPULAR_EXAMS[0],
+    customExam: "",
     alreadyTaken: "Sim"
   });
   const [subjectLevels, setSubjectLevels] = useState<Record<string, number>>({
@@ -40,9 +43,12 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
 
+    const finalExam = formData.selectedExam === "Outros" ? formData.customExam : formData.selectedExam;
+
     try {
       const response = await api.post("/auth/register", {
         ...formData,
+        targetExam: finalExam,
         alreadyTaken: formData.alreadyTaken === "Sim",
         subjectLevels
       });
@@ -135,31 +141,59 @@ export default function RegisterPage() {
 
           {step === 2 && (
             <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Cidade/Estado</label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Estado</label>
+                  <select 
+                    required 
+                    className="w-full px-4 py-2.5 rounded-xl border bg-background outline-none focus:ring-2 focus:ring-primary/20"
+                    value={formData.state}
+                    onChange={(e) => setFormData({...formData, state: e.target.value})}
+                  >
+                    <option value="">UF</option>
+                    {BRAZILIAN_STATES.map(s => (
+                      <option key={s.uf} value={s.uf}>{s.uf} - {s.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Cidade</label>
                   <input 
                     type="text" 
                     required 
-                    placeholder="Ex: Salvador, BA" 
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border bg-background outline-none focus:ring-2 focus:ring-primary/20" 
+                    placeholder="Sua cidade" 
+                    className="w-full px-4 py-2.5 rounded-xl border bg-background outline-none focus:ring-2 focus:ring-primary/20" 
                     value={formData.city}
                     onChange={(e) => setFormData({...formData, city: e.target.value})}
                   />
                 </div>
               </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Qual concurso você deseja prestar?</label>
-                <input 
-                  type="text" 
-                  required 
-                  placeholder="Ex: PF, Receita Federal, etc." 
-                  className="w-full px-4 py-2.5 rounded-xl border bg-background outline-none focus:ring-2 focus:ring-primary/20" 
-                  value={formData.targetExam}
-                  onChange={(e) => setFormData({...formData, targetExam: e.target.value})}
-                />
+                <select 
+                  className="w-full px-4 py-2.5 rounded-xl border bg-background outline-none focus:ring-2 focus:ring-primary/20"
+                  value={formData.selectedExam}
+                  onChange={(e) => setFormData({...formData, selectedExam: e.target.value})}
+                >
+                  {POPULAR_EXAMS.map(e => <option key={e}>{e}</option>)}
+                  <option value="Outros">Outros concurso...</option>
+                </select>
+                
+                {formData.selectedExam === "Outros" && (
+                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="pt-2">
+                    <input 
+                      type="text" 
+                      required 
+                      placeholder="Nome do concurso" 
+                      className="w-full px-4 py-2.5 rounded-xl border bg-background outline-none focus:ring-2 focus:ring-primary/20" 
+                      value={formData.customExam}
+                      onChange={(e) => setFormData({...formData, customExam: e.target.value})}
+                    />
+                  </motion.div>
+                )}
               </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Já prestou concurso antes?</label>
                 <select 

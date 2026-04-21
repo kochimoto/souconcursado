@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma';
+import { generateAIDataForExam } from '../services/aiService';
+import { computeSubjectPriority, buildWeeklySchedule } from '../services/studyPlanEngine';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -31,12 +31,87 @@ export const register = async (req: Request, res: Response) => {
       }
     });
 
+    // 3. (NEW) Generate Automatic Study Plan
+    const aiData = await generateAIDataForExam(targetExam || 'Concurso Geral');
+    
+    // Create Exam object if it doesn't exist for this target
+    let examId = '';
+    const existingExam = await prisma.exam.findFirst({
+      where: { name: targetExam }
+    });
+
+    if (existingExam) {
+      examId = existingExam.id;
+    } else {
+      const newExam = await prisma.exam.create({
+        data: {
+          name: targetExam || 'Plano Personalizado',
+          organization: 'Diversas',
+          area: 'Geral',
+          level: 'Superior',
+          status: 'Previsto',
+          subjects: aiData.subjects
+        }
+      });
+      examId = newExam.id;
+    }
+
+    // Compute priorities and schedule
+    const examSubjectsList = aiData.subjects.map(s => ({
+      subject: s,
+      questionCount: 10,
+      topics: []
+    }));
+
+    const priorities = computeSubjectPriority(subjectLevels || {}, examSubjectsList);
+    const weeklySchedule = buildWeeklySchedule(priorities, null, 2);
+
+    const contentBlocks = priorities.map(p => ({
+      subject: p.subject,
+      userLevel: p.userLevel,
+      priority: p.priority,
+      difficulty: p.difficulty,
+      weeklyHours: p.weeklyHours,
+      status: 'todo',
+      hoursSpent: 0
+    }));
+
+    await prisma.studyPlan.create({
+      data: {
+        userId: user.id,
+        examId,
+        contentBlocks,
+        weeklySchedule,
+        status: 'ACTIVE',
+        progress: 0
+      }
+    });
+
+    // 4. (NEW) Generate Initial Flashcards
+    for (const card of aiData.initialFlashcards) {
+      await prisma.flashcard.create({
+        data: {
+          userId: user.id,
+          front: card.front,
+          back: card.back,
+          cardType: card.cardType
+        }
+      });
+    }
+
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
     res.status(201).json({ token, user: { id: user.id, name: user.name, email: user.email } });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error creating user' });
+  } catch (error: any) {
+    console.error('REGISTRATION ERROR:', error);
+    // Explicitly check for Prisma connection errors
+    if (error.code === 'P2002') {
+      return res.status(400).json({ message: 'Este e-mail já está em uso.' });
+    }
+    res.status(500).json({ 
+      message: 'Erro ao criar conta.',
+      debug: process.env.NODE_ENV !== 'production' ? error.message : undefined 
+    });
   }
 };
 
