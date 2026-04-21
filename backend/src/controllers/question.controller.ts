@@ -18,32 +18,46 @@ export const getAdaptiveQuestion = async (req: express.Request, res: express.Res
     const userId = (req as any).user?.id ?? (req as any).userId;
     const { topic } = req.query;
 
-    // Buscar nível do usuário (simulado ou do perfil)
     const user = await prisma.user.findUnique({ where: { id: userId } });
     const userLevel = (user as any)?.level || 1;
 
     const aiQuestion = await generateAdaptiveQuestion(userLevel, topic as string || 'Direito Constitucional');
 
-    // Encontrar o índice da resposta correta
     const correctOptionIndex = aiQuestion.options.findIndex((opt: string) => opt === aiQuestion.correctAnswer);
+
+    // Garantir que existe um Exame para vincular (IA Generated Exam)
+    let aiExam = await prisma.exam.findFirst({
+      where: { name: 'Questões IA Adaptativas' }
+    });
+
+    if (!aiExam) {
+      aiExam = await prisma.exam.create({
+        data: {
+          name: 'Questões IA Adaptativas',
+          organization: 'SouConcursado AI',
+          area: 'Geral',
+          level: 'Vários',
+          status: 'Ativo'
+        }
+      });
+    }
 
     const savedQuestion = await prisma.question.create({
       data: {
-        title: aiQuestion.title,
-        content: aiQuestion.content,
+        text: aiQuestion.content || aiQuestion.text || 'Questão sem texto',
         options: aiQuestion.options,
-        correctAnswer: aiQuestion.correctAnswer, 
+        correctOption: correctOptionIndex === -1 ? 0 : correctOptionIndex,
         explanation: aiQuestion.explanation,
-        difficulty: aiQuestion.difficulty,
-        subject: aiQuestion.subject,
+        difficulty: aiQuestion.difficulty || 'Médio',
+        subject: aiQuestion.subject || 'Geral',
+        examId: aiExam.id
       }
     });
 
-    // Retorna com os campos esperados pelo frontend
     res.json({
       ...savedQuestion,
-      text: savedQuestion.content, // Frontend espera 'text'
-      correctOption: correctOptionIndex === -1 ? 0 : correctOptionIndex // Frontend espera 'correctOption'
+      text: savedQuestion.text,
+      correctOption: savedQuestion.correctOption
     });
   } catch (error) {
     console.error('Erro em getAdaptiveQuestion:', error);

@@ -4,10 +4,10 @@ import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
 
-// Todas as rotas de concursos exigem autenticação
-router.use(authenticateToken);
-
+// Rota pública para visualização de concursos
 router.get('/', getExams);
-router.post('/sync', syncExams);
+
+// Sincronização exige autenticação
+router.post('/sync', authenticateToken, syncExams);
 
 export default router;
