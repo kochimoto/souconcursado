@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, XCircle, Info, ArrowRight, BookOpen, Clock, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Info, ArrowRight, BookOpen, Clock, Loader2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 
