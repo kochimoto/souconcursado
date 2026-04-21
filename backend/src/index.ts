@@ -84,7 +84,8 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-if (process.env.NODE_ENV !== 'production') {
+// CRITICAL: NEVER call app.listen() on Vercel as it crashes the Serverless Function
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`[SERVER] Running isolated boot on port ${PORT}`);
   });
