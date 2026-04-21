@@ -8,8 +8,8 @@
   },
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "prisma generate",
-    "postinstall": "prisma generate",
+    "build": "PRISMA_CLIENT_ENGINE_TYPE=library prisma generate",
+    "postinstall": "PRISMA_CLIENT_ENGINE_TYPE=library prisma generate",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -17,7 +17,6 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
