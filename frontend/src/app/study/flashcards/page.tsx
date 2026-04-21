@@ -1,0 +1,185 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Zap, RotateCcw, CheckCircle2, AlertCircle, Loader2, Sparkles } from "lucide-react";
+import api from "@/lib/api";
+import ClozeCard from "@/components/ClozeCard";
+
+export default function FlashcardsPage() {
+  const [loading, setLoading] = useState(true);
+  const [cards, setCards] = useState<any[]>([]);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [currentCardIdx, setCurrentCardIdx] = useState(0);
+  const [showRatings, setShowRatings] = useState(false);
+
+  useEffect(() => {
+    fetchCards();
+  }, []);
+
+  const fetchCards = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get("/flashcards/due");
+      setCards(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar flashcards:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const currentCard = cards[currentCardIdx];
+
+  const handleRate = async (rating: "easy" | "medium" | "hard") => {
+    if (!currentCard) return;
+    
+    try {
+      await api.patch("/flashcards/review", {
+        id: currentCard.id,
+        rating
+      });
+      
+      // Advance to next card
+      if (currentCardIdx < cards.length - 1) {
+        setIsFlipped(false);
+        setShowRatings(false);
+        setCurrentCardIdx(prev => prev + 1);
+      } else {
+        // Finished the session
+        setCards([]);
+      }
+    } catch (error) {
+      console.error("Erro ao salvar avaliação:", error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="h-10 w-10 text-primary animate-spin" />
+        <p className="font-bold text-muted-foreground">Preparando sua revisão...</p>
+      </div>
+    );
+  }
+
+  if (cards.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center space-y-6">
+        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
+          <Sparkles className="h-10 w-10 text-primary" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-3xl font-black">Meta Batida!</h2>
+          <p className="text-muted-foreground font-medium max-w-sm">
+            Você não tem cartões para revisar no momento. Volte amanhã ou crie novos cartões.
+          </p>
+        </div>
+        <button 
+          onClick={() => window.location.href = "/dashboard"}
+          className="px-8 py-3 bg-primary text-primary-foreground rounded-2xl font-black shadow-xl shadow-primary/20 hover:scale-105 transition-all"
+        >
+          Voltar ao Dashboard
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-12 animate-fade-in text-center">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-black italic tracking-tighter uppercase">Revisão Diária</h1>
+        <p className="text-muted-foreground font-bold">Consolidando conhecimento com Repetição Espaçada</p>
+      </div>
+
+      {/* Card Container */}
+      <div className="relative min-h-[24rem] w-full perspective-1000">
+        {currentCard?.cardType === "cloze" ? (
+          <ClozeCard 
+            clozeText={currentCard.clozeText}
+            answers={currentCard.clozeAnswers}
+            onComplete={() => setShowRatings(true)}
+          />
+        ) : (
+          <motion.div
+            animate={{ rotateY: isFlipped ? 180 : 0 }}
+            transition={{ type: "spring", stiffness: 260, damping: 20 }}
+            className="relative w-full h-[24rem] preserve-3d cursor-pointer"
+            onClick={() => {
+              if (!showRatings) {
+                setIsFlipped(!isFlipped);
+                if (!isFlipped) setShowRatings(true);
+              }
+            }}
+          >
+            {/* Front */}
+            <div className="absolute inset-0 backface-hidden bg-card border-2 border-primary/20 rounded-[3rem] p-12 flex flex-col items-center justify-center shadow-2xl shadow-primary/5">
+              <Zap className="h-10 w-10 text-primary mb-8 opacity-20" />
+              <p className="text-2xl font-black leading-tight italic uppercase tracking-tighter">{currentCard?.front}</p>
+              <p className="absolute bottom-10 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Toque para revelar</p>
+            </div>
+
+            {/* Back */}
+            <div className="absolute inset-0 backface-hidden bg-primary text-primary-foreground rounded-[3rem] p-12 flex flex-col items-center justify-center shadow-2xl shadow-primary/20" style={{ transform: "rotateY(180deg)" }}>
+              <p className="text-xl font-bold leading-relaxed">{currentCard?.back}</p>
+              <p className="absolute bottom-10 text-[10px] font-black text-primary-foreground/60 uppercase tracking-widest">Como foi o desempenho?</p>
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Rating Controls */}
+      <AnimatePresence>
+        {showRatings && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid grid-cols-3 gap-4"
+          >
+            <button 
+              onClick={() => handleRate("hard")}
+              className="flex flex-col items-center gap-2 p-6 bg-red-500/10 hover:bg-red-500/20 text-red-600 rounded-3xl border border-red-500/20 transition-all font-black uppercase italic tracking-tighter text-xs"
+            >
+              <AlertCircle className="h-6 w-6" />
+              Difícil
+              <span className="text-[9px] font-bold opacity-60 normal-case tracking-normal">Rever em 1 min</span>
+            </button>
+            <button 
+              onClick={() => handleRate("medium")}
+              className="flex flex-col items-center gap-2 p-6 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 rounded-3xl border border-yellow-500/20 transition-all font-black uppercase italic tracking-tighter text-xs"
+            >
+              <RotateCcw className="h-6 w-6" />
+              Médio
+              <span className="text-[9px] font-bold opacity-60 normal-case tracking-normal">Rever em 1 dia</span>
+            </button>
+            <button 
+              onClick={() => handleRate("easy")}
+              className="flex flex-col items-center gap-2 p-6 bg-green-500/10 hover:bg-green-500/20 text-green-600 rounded-3xl border border-green-500/20 transition-all font-black uppercase italic tracking-tighter text-xs"
+            >
+              <CheckCircle2 className="h-6 w-6" />
+              Fácil
+              <span className="text-[9px] font-bold opacity-60 normal-case tracking-normal">Rever em 4 dias</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="pt-8 text-sm text-muted-foreground flex items-center justify-center gap-2">
+        <div className="w-full bg-muted h-2 rounded-full overflow-hidden max-w-[200px]">
+          <div 
+            className="bg-primary h-full transition-all duration-500" 
+            style={{ width: `${((currentCardIdx + 1) / cards.length) * 100}%` }}
+          />
+        </div>
+        <span className="font-bold">Cartão {currentCardIdx + 1}/{cards.length}</span>
+      </div>
+
+      {/* Tailwind helper for 3D */}
+      <style jsx global>{`
+        .perspective-1000 { perspective: 1000px; }
+        .preserve-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+      `}</style>
+    </div>
+  );
+}
