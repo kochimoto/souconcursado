@@ -1,59 +1,92 @@
 import express from 'express';
 import cors from 'cors';
 
+// Safe Boot: Minimizar imports no topo para evitar crash de inicialização na Vercel
 const app = express();
 
-// 1. HARD-CODED CORS (Bypass Middleware for Health)
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://souconcursado-theta.vercel.app');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.header('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
-  
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  next();
-});
-
+// Configurações básicas
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
-// 2. DIAGNOSTIC ROUTES (Absolute Priority - No DB dependency here)
+// --- ROTAS DIAGNÓSTICAS (100% ISOLADAS) ---
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '2.0.0-SafeBoot' });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV,
+    isolated: true 
+  });
 });
-
-// 3. LAZY LOADING ROUTES (Prevent global crash on import)
-// We use a safe try-catch wrapper for imports if needed, but for now just standard imports
-import authRoutes from './routes/auth.routes';
-import examRoutes from './routes/exam.routes';
-import questionRoutes from './routes/question.routes';
-import planRoutes from './routes/plan.routes';
-import flashcardRoutes from './routes/flashcard.routes';
-import prisma from './utils/prisma';
-
-app.use('/api/auth', authRoutes);
-app.use('/api/exams', examRoutes);
-app.use('/api/questions', questionRoutes);
-app.use('/api/plans', planRoutes);
-app.use('/api/flashcards', flashcardRoutes);
 
 app.get('/api/test-db', async (req, res) => {
   try {
-    const start = Date.now();
-    // Using simple query to test connection
-    const result = await (prisma as any).$queryRaw`SELECT 1 as connected`;
-    const duration = Date.now() - start;
-    res.json({ status: 'connected', duration: `${duration}ms`, result });
+    const { default: prisma } = await import('./utils/prisma');
+    await (prisma as any).$queryRaw`SELECT 1`;
+    res.json({ status: 'connected', database: 'postgres' });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: error.message });
   }
 });
 
+// --- ROTEAMENTO LAZY (Carregamento sob demanda para evitar crash global) ---
+app.use('/api/auth', async (req, res, next) => {
+  try {
+    const { default: router } = await import('./routes/auth.routes');
+    router(req, res, next);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to load Auth module', detail: err.message });
+  }
+});
+
+app.use('/api/exams', async (req, res, next) => {
+  try {
+    const { default: router } = await import('./routes/exam.routes');
+    router(req, res, next);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to load Exams module', detail: err.message });
+  }
+});
+
+app.use('/api/questions', async (req, res, next) => {
+  try {
+    const { default: router } = await import('./routes/question.routes');
+    router(req, res, next);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to load Questions module', detail: err.message });
+  }
+});
+
+app.use('/api/flashcards', async (req, res, next) => {
+  try {
+    const { default: router } = await import('./routes/flashcard.routes');
+    router(req, res, next);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to load Flashcards module', detail: err.message });
+  }
+});
+
+app.use('/api/plans', async (req, res, next) => {
+  try {
+    const { default: router } = await import('./routes/plan.routes');
+    router(req, res, next);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to load StudyPlan module', detail: err.message });
+  }
+});
+
+// Fallback para rotas não encontradas
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found in Souconcursado API' });
+});
+
 const PORT = process.env.PORT || 3001;
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`[SERVER] Running isolated boot on port ${PORT}`);
   });
 }
 
