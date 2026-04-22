@@ -18,26 +18,41 @@ export default function StudyPage() {
     fetchQuestion();
   }, []);
 
-  const fetchQuestion = async () => {
+  const fetchQuestion = async (forceAI = false) => {
     setLoading(true);
     setQuestion(null);
     setSelectedOption(null);
     setIsSubmitted(false);
     setShowExplanation(false);
-    
+
+    // Pega o subject da URL (passado pelo plano de estudos)
+    const urlParams = new URLSearchParams(window.location.search);
+    const subjectParam = urlParams.get('subject') || 'Direito Constitucional';
+
     try {
-      const endpoint = isAIMode ? "/questions/adaptive" : "/questions";
-      const params = isAIMode ? { topic: "Direito Constitucional" } : { limit: 1 };
-      
-      const response = await api.get(endpoint, { params });
-      
-      if (isAIMode) {
-        setQuestion(response.data);
-      } else if (response.data && response.data.length > 0) {
-        setQuestion(response.data[0]);
+      const useAI = forceAI || isAIMode;
+
+      if (!useAI) {
+        // Tenta buscar do banco primeiro
+        const response = await api.get('/questions', {
+          params: { subject: subjectParam, limit: 1 },
+        });
+
+        if (response.data && response.data.length > 0) {
+          setQuestion(response.data[0]);
+          return;
+        }
+        // Banco vazio → ativa IA automaticamente
+        setIsAIMode(true);
       }
+
+      // Modo IA
+      const response = await api.get('/questions/adaptive', {
+        params: { topic: subjectParam, level: 1 },
+      });
+      setQuestion(response.data);
     } catch (error) {
-      console.error("Erro ao carregar questão:", error);
+      console.error('Erro ao carregar questão:', error);
     } finally {
       setLoading(false);
     }
