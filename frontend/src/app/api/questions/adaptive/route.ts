@@ -13,9 +13,10 @@ export async function GET(request: NextRequest) {
   const level = parseInt(searchParams.get('level') || '1');
 
   try {
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY não configurada');
+    }
 
     const difficulty = level > 7 ? 'Difícil' : level > 4 ? 'Médio' : 'Fácil';
 
@@ -37,10 +38,29 @@ Responda SOMENTE com JSON válido, sem markdown, sem \`\`\`:
 
 correctOption deve ser o índice (0-3) da opção correta.`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().replace(/```json|```/g, '').trim();
-    const question = JSON.parse(text);
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          responseMimeType: "application/json"
+        }
+      })
+    });
 
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Gemini API error ${response.status}: ${errorData.error?.message || 'Unknown'}`);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('IA retornou resposta vazia');
+
+    const question = JSON.parse(text);
     return NextResponse.json(question);
   } catch (error: any) {
     console.error('[/api/questions/adaptive] Error:', error?.message);
