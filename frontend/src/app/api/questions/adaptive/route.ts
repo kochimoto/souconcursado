@@ -38,8 +38,8 @@ Responda SOMENTE com JSON válido:
 
 correctOption deve ser o índice (0-3) da opção correta.`;
 
-    // Usando gemini-2.0-flash que confirmamos estar disponível para sua chave
-    const modelName = "gemini-2.0-flash";
+    // Usando gemini-pro-latest que tem maior probabilidade de ter cota no plano gratuito
+    const modelName = "gemini-pro-latest";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
