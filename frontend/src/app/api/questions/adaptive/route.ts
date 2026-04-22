@@ -38,7 +38,8 @@ Responda SOMENTE com JSON válido, sem markdown, sem \`\`\`:
 
 correctOption deve ser o índice (0-3) da opção correta.`;
 
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // Usando v1beta conforme sugerido pela análise externa, mantendo o fetch direto
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
