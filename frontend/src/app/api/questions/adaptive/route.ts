@@ -13,64 +13,68 @@ export async function GET(request: NextRequest) {
   const level = parseInt(searchParams.get('level') || '1');
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    const apiKey = process.env.GROQ_API_KEY?.trim();
     if (!apiKey) {
-      throw new Error('Configuração de IA ausente.');
+      console.error('[/api/questions/adaptive] Erro: GROQ_API_KEY não encontrada.');
+      throw new Error('Configuração de IA (Groq) ausente.');
     }
 
     const difficulty = level > 7 ? 'Difícil' : level > 4 ? 'Médio' : 'Fácil';
 
     const prompt = `Você é um especialista em concursos públicos brasileiros.
-Gere UMA questão de múltipla escolha sobre o tema: "${topic}".
-Dificuldade: ${difficulty} (nível ${level}/10).
+Gere UMA questão de múltipla escolha inédita sobre o tema: "${topic}".
+Dificuldade: ${difficulty} (nível de usuário ${level}/10).
 
 A resposta DEVE ser estritamente um JSON no formato abaixo, sem nenhum texto antes ou depois:
 {
   "id": "ai_${Date.now()}",
-  "text": "Enunciado da questão",
+  "text": "Enunciado completo da questão",
   "options": ["Opção A", "Opção B", "Opção C", "Opção D"],
   "correctOption": 0,
-  "explanation": "Explicação da resposta",
+  "explanation": "Explicação detalhada do porquê a resposta está correta",
   "difficulty": "${difficulty}",
   "subject": "${topic}",
-  "exam": { "name": "Questão Gerada por IA", "organization": "Gemini" }
-}`;
+  "exam": { "name": "Questão Gerada por IA", "organization": "Groq Llama 3" }
+}
 
-    const modelName = "gemini-1.5-flash";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-    
-    const response = await fetch(url, {
+Importante: correctOption deve ser o índice (0-3) da opção correta.`;
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: "Você é um assistente que gera questões de concursos em formato JSON puro." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.7,
+        response_format: { type: "json_object" }
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Gemini API error ${response.status}: ${errorData.error?.message || 'Unknown'}`);
+      console.error('[/api/questions/adaptive] Groq API Error:', response.status, JSON.stringify(errorData));
+      throw new Error(`Groq API returned ${response.status}`);
     }
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const content = data.choices?.[0]?.message?.content;
     
-    if (!text) {
-      throw new Error('IA retornou uma estrutura de resposta inesperada');
+    if (!content) {
+      throw new Error('Groq retornou uma resposta vazia');
     }
 
-    // Limpeza robusta: extrai apenas o conteúdo entre as primeiras e últimas chaves { }
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('IA não retornou um JSON válido');
-    }
-
-    const question = JSON.parse(jsonMatch[0]);
+    const question = JSON.parse(content);
     return NextResponse.json(question);
   } catch (error: any) {
     console.error('[/api/questions/adaptive] Error:', error?.message);
     return NextResponse.json(
-      { message: 'Erro ao gerar questão com IA', detail: error?.message },
+      { message: 'Erro ao gerar questão com Groq', detail: error?.message },
       { status: 500 }
     );
   }

@@ -1,35 +1,33 @@
-// @ts-nocheck
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+// backend/src/services/aiService.ts
 
 export const generateAdaptiveQuestion = async (userLevel: number, topic: string) => {
-  const prompt = `
-    Você é um especialista em concursos públicos brasileiros.
-    Gere uma questão de múltipla escolha inédita sobre o tema: "${topic}".
-    O nível de dificuldade deve ser adaptado para um usuário de nível ${userLevel} (em uma escala de 1 a 10).
-    
-    A resposta deve estar em formato JSON rigoroso com a seguinte estrutura:
-    {
-      "title": "Título curto da questão",
-      "content": "O enunciado completo da questão",
-      "options": ["Opção A", "Opção B", "Opção C", "Opção D"],
-      "correctAnswer": "A opção exata que está correta",
-      "explanation": "Uma explicação detalhada do porquê esta opção está correta",
-      "difficulty": ${userLevel > 7 ? '"Difícil"' : userLevel > 4 ? '"Médio"' : '"Fácil"'},
-      "subject": "${topic}"
-    }
-  `;
+  const apiKey = process.env.GROQ_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error('GROQ_API_KEY não configurada');
+  }
+
+  const difficulty = userLevel > 7 ? 'Difícil' : userLevel > 4 ? 'Médio' : 'Fácil';
+  const prompt = `Gere uma questão de múltipla escolha inédita sobre o tema: "${topic}". Dificuldade: ${difficulty}. Retorne APENAS o JSON.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    // Limpar markdown se houver
-    const jsonStr = text.replace(/```json|```/g, "").trim();
-    return JSON.parse(jsonStr);
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        response_format: { type: "json_object" }
+      })
+    });
+
+    const data = await response.json();
+    return JSON.parse(data.choices?.[0]?.message?.content || '{}');
   } catch (error) {
-    console.error("Erro ao gerar questão com IA:", error);
-    throw new Error("Falha na geração de questão por IA");
+    console.error('Erro na Groq:', error);
+    throw error;
   }
 };
