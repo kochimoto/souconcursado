@@ -1,0 +1,149 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+  engineType    = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  password        String
+  name            String
+  age             Int?
+  city            String?
+  state           String?
+  alreadyTaken    Boolean  @default(false)
+  targetExam      String?
+  howFound        String?
+  xp              Int      @default(0)
+  level           Int      @default(1)
+  rankingPoints   Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  subjectLevels   Json?
+  attempts        Attempt[]
+  flashcards      Flashcard[]
+  studySchedules  StudySchedule[]
+  studyPlans      StudyPlan[]
+  subjectStats    SubjectStat[]
+}
+
+model Exam {
+  id               String     @id @default(uuid())
+  name             String
+  organization     String
+  area             String
+  state            String?
+  level            String
+  status           String
+  date             DateTime?
+  vacancies        Int?
+  fee              Float?
+  subjects         Json?
+  inscriptionStart DateTime?
+  inscriptionEnd   DateTime?
+  examDate         DateTime?
+  createdAt        DateTime   @default(now())
+
+  questions        Question[]
+  studyPlans       StudyPlan[]
+}
+
+model Question {
+  id            String    @id @default(uuid())
+  text          String
+  options       Json
+  correctOption Int
+  explanation   String?
+  subject       String
+  topic         String?
+  difficulty    String    @default("Médio")
+
+  examId        String
+  exam          Exam      @relation(fields: [examId], references: [id])
+
+  attempts      Attempt[]
+  flashcards    Flashcard[]
+
+  createdAt     DateTime  @default(now())
+}
+
+model Attempt {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  questionId     String
+  question       Question @relation(fields: [questionId], references: [id])
+  chosenOption   Int
+  isCorrect      Boolean
+  subject        String?
+  difficulty     String?
+  createdAt      DateTime @default(now())
+}
+
+model Flashcard {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  questionId   String?
+  question     Question? @relation(fields: [questionId], references: [id])
+
+  cardType     String    @default("classic")
+  front        String?
+  back         String?
+  clozeText    String?
+  clozeAnswers Json?
+
+  interval     Int       @default(0)
+  easeFactor   Float     @default(2.5)
+  reps         Int       @default(0)
+  nextReview   DateTime  @default(now())
+  lastReviewedAt DateTime?
+
+  createdAt    DateTime  @default(now())
+}
+
+model SubjectStat {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  subject       String
+  totalAnswered Int      @default(0)
+  totalCorrect  Int      @default(0)
+  currentLevel  Int      @default(1)
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, subject])
+}
+
+model StudySchedule {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  planData  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StudyPlan {
+  id             String    @id @default(uuid())
+  userId         String
+  examId         String
+  user           User      @relation(fields: [userId], references: [id])
+  exam           Exam      @relation(fields: [examId], references: [id])
+  status         String    @default("ACTIVE")
+  progress       Float     @default(0.0)
+  contentBlocks  Json
+  weeklySchedule Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
