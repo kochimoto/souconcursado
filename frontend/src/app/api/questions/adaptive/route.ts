@@ -15,18 +15,7 @@ export async function GET(request: NextRequest) {
   try {
     const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey) {
-      console.error('[/api/questions/adaptive] Erro: GEMINI_API_KEY não encontrada.');
       throw new Error('Configuração de IA ausente.');
-    }
-
-    // DIAGNÓSTICO: Listar modelos disponíveis para esta chave
-    try {
-      const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-      const listData = await listRes.json();
-      console.log('[/api/questions/adaptive] Modelos disponíveis para esta chave:', 
-        listData.models?.map((m: any) => m.name).join(', ') || 'Nenhum modelo listado');
-    } catch (e) {
-      console.error('[/api/questions/adaptive] Falha ao listar modelos');
     }
 
     const difficulty = level > 7 ? 'Difícil' : level > 4 ? 'Médio' : 'Fácil';
@@ -35,7 +24,7 @@ export async function GET(request: NextRequest) {
 Gere UMA questão de múltipla escolha sobre: "${topic}".
 Nível de dificuldade: ${difficulty} (nível ${level}/10).
 
-Responda SOMENTE com JSON válido, sem markdown, sem \`\`\`:
+Responda SOMENTE com JSON válido:
 {
   "id": "ai_${Date.now()}",
   "text": "Enunciado completo da questão",
@@ -49,8 +38,8 @@ Responda SOMENTE com JSON válido, sem markdown, sem \`\`\`:
 
 correctOption deve ser o índice (0-3) da opção correta.`;
 
-    // Usando gemini-pro por ser o mais compatível universalmente
-    const modelName = "gemini-pro";
+    // Usando gemini-2.0-flash que confirmamos estar disponível para sua chave
+    const modelName = "gemini-2.0-flash";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
@@ -58,21 +47,14 @@ correctOption deve ser o índice (0-3) da opção correta.`;
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error(`[/api/questions/adaptive] Erro na API (${response.status}):`, JSON.stringify(errorData));
-      
-      // Se der 404, vamos tentar retornar uma mensagem mais útil
-      if (response.status === 404) {
-        return NextResponse.json({ 
-          message: `O modelo ${modelName} não foi encontrado. Verifique se a API Generative Language está ativa no seu projeto do Google.`,
-          detail: errorData 
-        }, { status: 404 });
-      }
-
       throw new Error(`Gemini API error ${response.status}: ${errorData.error?.message || 'Unknown'}`);
     }
 
@@ -80,15 +62,11 @@ correctOption deve ser o índice (0-3) da opção correta.`;
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!text) {
-      console.error('[/api/questions/adaptive] Resposta sem texto:', JSON.stringify(data));
       throw new Error('IA retornou uma estrutura de resposta inesperada');
     }
 
-    // Tentar limpar markdown se a IA colocar
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    const jsonStr = jsonMatch ? jsonMatch[0] : text;
-    
-    const question = JSON.parse(jsonStr);
+    const question = JSON.parse(text);
+    return NextResponse.json(question);
     return NextResponse.json(question);
   } catch (error: any) {
     console.error('[/api/questions/adaptive] Error:', error?.message);
