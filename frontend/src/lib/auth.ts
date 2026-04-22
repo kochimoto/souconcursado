@@ -23,7 +23,8 @@ export function verifyToken(request: NextRequest): AuthUser | null {
 }
 
 export function signToken(userId: string, expiresIn: string = '7d'): string {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: expiresIn as any });
 }
 
 export function unauthorized() {
