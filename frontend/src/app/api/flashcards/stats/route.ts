@@ -13,15 +13,20 @@ export async function GET(request: NextRequest) {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    const todayReviews = await (prisma as any).flashcard.count({
+    console.log(`[Stats] Buscando stats para user: ${authUser.id}`);
+
+    // @ts-ignore
+    const todayReviews = await prisma.flashcard.count({
       where: { userId: authUser.id, lastReviewedAt: { gte: startOfDay } },
     });
-    const totalCards = await (prisma as any).flashcard.count({
+    // @ts-ignore
+    const totalCards = await prisma.flashcard.count({
       where: { userId: authUser.id },
     });
 
     return NextResponse.json({ todayReviews, dailyGoal: 30, totalCards });
   } catch (error: any) {
-    return NextResponse.json({ message: 'Error fetching stats' }, { status: 500 });
+    console.error('[Stats] Erro ao buscar estatísticas de flashcards:', error);
+    return NextResponse.json({ message: 'Error fetching stats', detail: error.message }, { status: 500 });
   }
 }

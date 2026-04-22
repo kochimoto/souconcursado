@@ -69,7 +69,8 @@ A resposta DEVE ser um objeto JSON puro com esta estrutura:
         // Define a revisão para 5 minutos atrás para garantir que apareça na hora
         const immediateReview = new Date(Date.now() - 300000);
 
-        const saved = await (prisma as any).flashcard.create({
+        // @ts-ignore
+        const saved = await prisma.flashcard.create({
           data: {
             userId: authUser.id,
             cardType: card.cardType || 'classic',
