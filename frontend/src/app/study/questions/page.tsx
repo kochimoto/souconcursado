@@ -1,3 +1,4 @@
+// frontend/src/app/study/questions/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,42 +14,52 @@ export default function StudyPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [isAIMode, setIsAIMode] = useState(false);
+  const [stats, setStats] = useState<any>(null);
+  const [subjectParam, setSubjectParam] = useState("");
 
   useEffect(() => {
-    fetchQuestion();
+    const urlParams = new URLSearchParams(window.location.search);
+    const sub = urlParams.get('subject') || 'Direito Constitucional';
+    setSubjectParam(sub);
+    fetchQuestion(sub);
+    fetchStats(sub);
   }, []);
 
-  const fetchQuestion = async (forceAI = false) => {
+  const fetchStats = async (sub: string) => {
+    try {
+      const response = await api.get('/questions/stats');
+      const subjectStat = response.data.find((s: any) => s.subject === sub);
+      setStats(subjectStat || { totalAnswered: 0, currentLevel: 1 });
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas:', error);
+    }
+  };
+
+  const fetchQuestion = async (sub: string = subjectParam, forceAI = false) => {
     setLoading(true);
     setQuestion(null);
     setSelectedOption(null);
     setIsSubmitted(false);
     setShowExplanation(false);
 
-    // Pega o subject da URL (passado pelo plano de estudos)
-    const urlParams = new URLSearchParams(window.location.search);
-    const subjectParam = urlParams.get('subject') || 'Direito Constitucional';
-
     try {
       const useAI = forceAI || isAIMode;
 
       if (!useAI) {
-        // Tenta buscar do banco primeiro
         const response = await api.get('/questions', {
-          params: { subject: subjectParam, limit: 1 },
+          params: { subject: sub, limit: 1 },
         });
 
         if (response.data && response.data.length > 0) {
           setQuestion(response.data[0]);
+          setLoading(false);
           return;
         }
-        // Banco vazio → ativa IA automaticamente
         setIsAIMode(true);
       }
 
-      // Modo IA
       const response = await api.get('/questions/adaptive', {
-        params: { topic: subjectParam, level: 1 },
+        params: { topic: sub, level: stats?.currentLevel || 1 },
       });
       setQuestion(response.data);
     } catch (error) {
@@ -66,6 +77,7 @@ export default function StudyPage() {
           chosenOption: selectedOption
         });
         setIsSubmitted(true);
+        fetchStats(subjectParam);
       } catch (error) {
         console.error("Erro ao enviar resposta:", error);
         setIsSubmitted(true);
@@ -73,16 +85,26 @@ export default function StudyPage() {
     }
   };
 
+  const getLevelTarget = (level: number) => {
+    if (level <= 3) return 20; // Fácil
+    if (level <= 7) return 35; // Médio
+    return 50; // Difícil
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="h-10 w-10 text-primary animate-spin" />
         <p className="font-bold text-muted-foreground italic">
-          {isAIMode ? "Gemini está gerando sua questão adaptativa..." : "Buscando próxima questão..."}
+          {isAIMode ? "A IA está gerando sua questão adaptativa..." : "Buscando próxima questão..."}
         </p>
       </div>
     );
   }
+
+  const target = getLevelTarget(stats?.currentLevel || 1);
+  const currentProgress = stats?.totalAnswered || 0;
+  const progressPercent = Math.min(100, (currentProgress / target) * 100);
 
   if (!question) {
     return (
@@ -98,10 +120,35 @@ export default function StudyPage() {
     );
   }
 
-  const isCorrect = selectedOption === question.correctOption;
-
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-8 animate-fade-in">
+      {/* Progress Bar Header */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-end">
+          <div className="space-y-1">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Progresso no Nível {stats?.currentLevel || 1}</p>
+            <h2 className="text-xl font-black italic tracking-tighter">Questão {currentProgress}/{target}</h2>
+          </div>
+          <div className="text-right">
+             <span className={cn(
+               "px-3 py-1 rounded-full text-[10px] font-black uppercase italic tracking-widest border",
+               target === 20 ? "bg-green-500/10 text-green-600 border-green-500/20" :
+               target === 35 ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
+               "bg-purple-500/10 text-purple-600 border-purple-500/20"
+             )}>
+               Nível: {target === 20 ? "Fácil" : target === 35 ? "Médio" : "Difícil"}
+             </span>
+          </div>
+        </div>
+        <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+           <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: `${progressPercent}%` }}
+            className="h-full bg-primary shadow-[0_0_15px_rgba(var(--primary),0.3)]"
+           />
+        </div>
+      </div>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b pb-8">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-primary/10 rounded-2xl">
@@ -110,7 +157,7 @@ export default function StudyPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-black italic tracking-tighter uppercase">{question.subject}</h1>
-              {question.id.startsWith('ai_') || isAIMode && (
+              {(question.id.startsWith('ai_') || isAIMode) && (
                 <span className="flex items-center gap-1 px-2 py-0.5 bg-indigo-500/10 text-indigo-600 text-[9px] font-black uppercase rounded-full border border-indigo-500/20">
                   <Sparkles className="h-2 w-2" />
                   Gerado por IA
@@ -124,7 +171,6 @@ export default function StudyPage() {
         </div>
 
         <div className="flex items-center gap-4">
-           {/* IA Toggle */}
           <button 
             onClick={() => setIsAIMode(!isAIMode)}
             className={cn(
@@ -133,7 +179,7 @@ export default function StudyPage() {
             )}
           >
             <Sparkles className={cn("h-3 w-3", isAIMode ? "animate-pulse" : "")} />
-            Modo IA {isAIMode ? "ON" : "OFF"}
+            IA {isAIMode ? "ON" : "OFF"}
           </button>
 
           <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -248,4 +294,3 @@ export default function StudyPage() {
     </div>
   );
 }
-

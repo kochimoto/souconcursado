@@ -11,10 +11,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const now = new Date();
+    // Adiciona um buffer de 1 minuto para garantir que cards recém-criados apareçam
+    const bufferTime = new Date(now.getTime() + 60000); 
+    
     const flashcards = await (prisma as any).flashcard.findMany({
       where: {
         userId: authUser.id,
-        nextReview: { lte: now },
+        nextReview: { lte: bufferTime },
       },
       include: { question: true },
       orderBy: { nextReview: 'asc' },
