@@ -15,8 +15,18 @@ export async function GET(request: NextRequest) {
   try {
     const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey) {
-      console.error('[/api/questions/adaptive] Erro: GEMINI_API_KEY não encontrada nas variáveis de ambiente.');
-      throw new Error('Configuração de IA ausente no servidor.');
+      console.error('[/api/questions/adaptive] Erro: GEMINI_API_KEY não encontrada.');
+      throw new Error('Configuração de IA ausente.');
+    }
+
+    // DIAGNÓSTICO: Listar modelos disponíveis para esta chave
+    try {
+      const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      const listData = await listRes.json();
+      console.log('[/api/questions/adaptive] Modelos disponíveis para esta chave:', 
+        listData.models?.map((m: any) => m.name).join(', ') || 'Nenhum modelo listado');
+    } catch (e) {
+      console.error('[/api/questions/adaptive] Falha ao listar modelos');
     }
 
     const difficulty = level > 7 ? 'Difícil' : level > 4 ? 'Médio' : 'Fácil';
