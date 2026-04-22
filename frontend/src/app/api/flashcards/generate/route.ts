@@ -62,22 +62,30 @@ A resposta DEVE ser um objeto JSON puro com esta estrutura:
     const content = JSON.parse(data.choices?.[0]?.message?.content || '{"flashcards": []}');
     const generatedCards = content.flashcards || [];
 
-    // Salvar no banco de dados
-    const savedCards = await Promise.all(
-      generatedCards.map((card: any) => 
-        (prisma as any).flashcard.create({
+    // Salvar no banco de dados de forma resiliente
+    const savedCards = [];
+    for (const card of generatedCards) {
+      try {
+        const saved = await (prisma as any).flashcard.create({
           data: {
             userId: authUser.id,
-            cardType: card.cardType,
+            cardType: card.cardType || 'classic',
             front: card.front || "",
             back: card.back || "",
             clozeText: card.clozeText || "",
             clozeAnswers: card.clozeAnswers || [],
             nextReview: new Date()
           }
-        })
-      )
-    );
+        });
+        savedCards.push(saved);
+      } catch (err) {
+        console.error('Erro ao salvar card individual:', err);
+      }
+    }
+
+    if (savedCards.length === 0 && generatedCards.length > 0) {
+      throw new Error('Falha ao salvar cartões no banco de dados');
+    }
 
     return NextResponse.json({ 
       message: `${savedCards.length} flashcards gerados com sucesso!`,

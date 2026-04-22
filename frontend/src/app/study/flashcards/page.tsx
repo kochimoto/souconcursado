@@ -82,6 +82,34 @@ export default function FlashcardsPage() {
   const [showGenModal, setShowGenModal] = useState(false);
   const [genTopic, setGenTopic] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [availableTopics, setAvailableTopics] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchInitialData();
+    fetchTopics();
+  }, []);
+
+  const fetchTopics = async () => {
+    try {
+      const response = await api.get("/plans/me");
+      const plans = response.data;
+      const topicsSet = new Set<string>();
+      
+      plans.forEach((plan: any) => {
+        if (plan.contentBlocks) {
+          (plan.contentBlocks as any[]).forEach(block => {
+            if (block.subject) topicsSet.add(block.subject);
+          });
+        }
+      });
+
+      const topicsList = Array.from(topicsSet);
+      setAvailableTopics(topicsList);
+      if (topicsList.length > 0) setGenTopic(topicsList[0]);
+    } catch (error) {
+      console.error("Erro ao buscar tópicos:", error);
+    }
+  };
 
   if (loading) {
     return (
@@ -98,8 +126,8 @@ export default function FlashcardsPage() {
     try {
       await api.post("/flashcards/generate", { topic: genTopic });
       setShowGenModal(false);
-      setGenTopic("");
-      fetchInitialData(); // Reload
+      fetchInitialData(); // Reload stats and cards
+      alert(`Flashcards de ${genTopic} gerados com sucesso!`);
     } catch (error) {
       console.error("Erro ao gerar:", error);
       alert("Erro ao gerar flashcards. Tente novamente.");
@@ -158,7 +186,7 @@ export default function FlashcardsPage() {
           </button>
         </div>
 
-        {/* Modal Simples de Geração */}
+        {/* Modal Inteligente de Geração */}
         <AnimatePresence>
           {showGenModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
@@ -166,33 +194,49 @@ export default function FlashcardsPage() {
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-card border-2 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl"
+                className="bg-card border-4 border-primary/10 rounded-[3rem] p-8 w-full max-w-md shadow-2xl"
               >
-                <h3 className="text-xl font-black italic uppercase tracking-tighter mb-4">Gerar Flashcards por IA</h3>
-                <p className="text-sm text-muted-foreground font-bold mb-6">Qual assunto você deseja memorizar agora?</p>
-                
-                <input 
-                  type="text"
-                  placeholder="Ex: Hardware e Redes"
-                  value={genTopic}
-                  onChange={(e) => setGenTopic(e.target.value)}
-                  className="w-full px-6 py-4 bg-muted rounded-2xl border-2 border-transparent focus:border-primary outline-none font-bold mb-6"
-                />
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-white" />
+                  </div>
+                  <h3 className="text-xl font-black italic uppercase tracking-tighter">Gerar com IA</h3>
+                </div>
 
-                <div className="flex gap-3">
+                <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-2">Assunto Sugerido</p>
+                <div className="relative group">
+                  <select 
+                    value={genTopic}
+                    onChange={(e) => setGenTopic(e.target.value)}
+                    className="w-full px-6 py-5 bg-muted rounded-2xl border-2 border-transparent focus:border-primary outline-none font-bold text-sm appearance-none cursor-pointer group-hover:bg-muted/80 transition-all mb-8"
+                  >
+                    {availableTopics.length > 0 ? (
+                      availableTopics.map(topic => (
+                        <option key={topic} value={topic}>{topic}</option>
+                      ))
+                    ) : (
+                      <option disabled>Nenhum assunto no plano</option>
+                    )}
+                  </select>
+                  <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none mt-[-16px]">
+                    <ChevronRight className="h-4 w-4 text-muted-foreground rotate-90" />
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
                   <button 
                     onClick={() => setShowGenModal(false)}
-                    className="flex-1 py-4 font-black uppercase text-xs tracking-widest text-muted-foreground"
+                    className="flex-1 py-4 font-black uppercase text-[10px] tracking-widest text-muted-foreground hover:text-primary transition-colors"
                   >
                     Cancelar
                   </button>
                   <button 
                     onClick={handleGenerate}
-                    disabled={generating || !genTopic.trim()}
-                    className="flex-[2] py-4 bg-primary text-primary-foreground rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 disabled:opacity-50"
+                    disabled={generating || !genTopic}
+                    className="flex-[2] py-4 bg-primary text-primary-foreground rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50"
                   >
-                    {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                    {generating ? "Gerando..." : "Gerar Agora"}
+                    {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                    {generating ? "Processando..." : "Gerar Agora"}
                   </button>
                 </div>
               </motion.div>
