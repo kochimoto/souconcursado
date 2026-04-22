@@ -7,6 +7,12 @@ import { CheckCircle2, XCircle, Info, ArrowRight, BookOpen, Clock, Loader2, Spar
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 
+const getLevelTarget = (level: number) => {
+  if (level <= 3) return 20; // Fácil
+  if (level <= 7) return 35; // Médio
+  return 50; // Difícil
+};
+
 export default function StudyPage() {
   const [loading, setLoading] = useState(true);
   const [question, setQuestion] = useState<any>(null);
@@ -115,11 +121,7 @@ export default function StudyPage() {
     }
   };
 
-  const getLevelTarget = (level: number) => {
-    if (level <= 3) return 20; // Fácil
-    if (level <= 7) return 35; // Médio
-    return 50; // Difícil
-  };
+
 
   if (loading) {
     return (
