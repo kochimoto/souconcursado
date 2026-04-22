@@ -39,30 +39,46 @@ Responda SOMENTE com JSON válido, sem markdown, sem \`\`\`:
 
 correctOption deve ser o índice (0-3) da opção correta.`;
 
-    // Usando v1beta conforme sugerido pela análise externa, mantendo o fetch direto
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // Usando gemini-pro por ser o mais compatível universalmente
+    const modelName = "gemini-pro";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          responseMimeType: "application/json"
-        }
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.error(`[/api/questions/adaptive] Erro na API (${response.status}):`, JSON.stringify(errorData));
+      
+      // Se der 404, vamos tentar retornar uma mensagem mais útil
+      if (response.status === 404) {
+        return NextResponse.json({ 
+          message: `O modelo ${modelName} não foi encontrado. Verifique se a API Generative Language está ativa no seu projeto do Google.`,
+          detail: errorData 
+        }, { status: 404 });
+      }
+
       throw new Error(`Gemini API error ${response.status}: ${errorData.error?.message || 'Unknown'}`);
     }
 
     const data = await response.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) throw new Error('IA retornou resposta vazia');
+    
+    if (!text) {
+      console.error('[/api/questions/adaptive] Resposta sem texto:', JSON.stringify(data));
+      throw new Error('IA retornou uma estrutura de resposta inesperada');
+    }
 
-    const question = JSON.parse(text);
+    // Tentar limpar markdown se a IA colocar
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const jsonStr = jsonMatch ? jsonMatch[0] : text;
+    
+    const question = JSON.parse(jsonStr);
     return NextResponse.json(question);
   } catch (error: any) {
     console.error('[/api/questions/adaptive] Error:', error?.message);
