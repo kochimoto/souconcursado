@@ -46,6 +46,7 @@ export default function FlashcardsPage() {
 
   useEffect(() => {
     fetchInitialData();
+    fetchTopics();
   }, []);
 
   const fetchInitialData = async () => {
@@ -68,7 +69,6 @@ export default function FlashcardsPage() {
     setLoading(true);
     try {
       const response = await api.get("/flashcards/all");
-      // Filtra os que já foram revisados hoje (opcional, ou apenas pega todos)
       setCards(response.data.slice(0, 30)); 
       setSessionFinished(false);
       setCurrentCardIdx(0);
@@ -90,16 +90,13 @@ export default function FlashcardsPage() {
         rating
       });
       
-      // Update stats locally
       setStats((prev: any) => ({ ...prev, todayReviews: prev.todayReviews + 1 }));
 
-      // Advance to next card
       if (currentCardIdx < cards.length - 1) {
         setIsFlipped(false);
         setShowRatings(false);
         setCurrentCardIdx(prev => prev + 1);
       } else {
-        // Finished the current stack
         setCards([]);
         setSessionFinished(true);
         saveStudyTime();
@@ -113,11 +110,6 @@ export default function FlashcardsPage() {
   const [genTopic, setGenTopic] = useState("");
   const [generating, setGenerating] = useState(false);
   const [availableTopics, setAvailableTopics] = useState<string[]>([]);
-
-  useEffect(() => {
-    fetchInitialData();
-    fetchTopics();
-  }, []);
 
   const fetchTopics = async () => {
     try {
@@ -373,7 +365,11 @@ export default function FlashcardsPage() {
 
       {/* Card Container */}
       <div className="relative min-h-[24rem] w-full perspective-1000">
-        {currentCard?.cardType === "cloze" ? (
+        {!currentCard ? (
+          <div className="bg-card border-2 border-dashed rounded-[3rem] p-12 flex items-center justify-center text-muted-foreground italic font-bold">
+            Carregando cartão...
+          </div>
+        ) : currentCard.cardType === "cloze" ? (
           <ClozeCard 
             clozeText={currentCard.clozeText}
             onComplete={() => setShowRatings(true)}

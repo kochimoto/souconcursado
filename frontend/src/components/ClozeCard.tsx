@@ -22,12 +22,12 @@ export default function ClozeCard({ clozeText, onComplete }: ClozeCardProps) {
   }, [clozeText]);
 
   // Regex para capturar o conteúdo dentro de {{c1::...}}
-  const clozeRegex = /\{\{c\d::(.*?)\}\}/g;
-  const match = clozeRegex.exec(clozeText);
+  const clozeRegex = /\{\{c\d::(.*?)\}\}/;
+  const match = (clozeText || "").match(clozeRegex);
   const correctAnswer = match ? match[1] : "";
 
   // Divide o texto para exibir o que vem antes e depois da lacuna
-  const parts = clozeText.split(/\{\{c\d::.*?\}\}/);
+  const parts = (clozeText || "").split(/\{\{c\d::.*?\}\}/);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
