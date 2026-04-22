@@ -1,7 +1,8 @@
-import app from '../src/index';
-
-/**
- * Ponto de entrada nativo para a Vercel.
- * Vercel automaticamente detecta arquivos na pasta /api como funções serverless.
- */
-export default app;
+// Teste de Isolamento Absoluto
+export default function handler(req: any, res: any) {
+  res.status(200).json({ 
+    status: "ok", 
+    message: "O motor da Vercel está funcionando",
+    time: new Date().toISOString()
+  });
+}
