@@ -1,9 +1,9 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "Souconcursado Backend - Estabilizado por Equipe Sênior",
+  "description": "Souconcursado Backend - Estabilizado CommonJS",
   "main": "src/index.ts",
-  "type": "module",
+  "type": "commonjs",
   "engines": {
     "node": "20.x"
   },

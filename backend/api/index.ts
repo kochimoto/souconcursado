@@ -1,7 +1,7 @@
-import app from '../src/index';
+const app = require('../src/index');
 
 /**
- * Ponto de entrada nativo para a Vercel.
- * Redireciona todas as requisições para o app Express em /src/index.ts.
+ * Ponto de entrada nativo para a Vercel (CommonJS).
+ * Vercel detecta e executa nativamente sem necessidade de transpilação ESM complexa.
  */
-export default app;
+module.exports = app;

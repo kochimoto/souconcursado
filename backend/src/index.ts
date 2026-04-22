@@ -1,95 +1,63 @@
-import express from 'express';
-import cors from 'cors';
+const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
 
-// Safe Boot: Minimizar imports no topo para evitar crash de inicialização na Vercel
+dotenv.config();
+
 const app = express();
 
-// Configurações básicas
+// Configurações básicas de CORS
 app.use(cors({
   origin: ['https://souconcursado-theta.vercel.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
+
 app.use(express.json());
 
-// --- ROTAS DIAGNÓSTICAS (100% ISOLADAS) ---
+// Rota de Health integrada (sem dependências)
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV,
-    isolated: true 
+    engine: 'CommonJS',
+    timestamp: new Date().toISOString() 
   });
 });
 
-app.get('/api/test-db', async (req, res) => {
+// Lazy loading para evitar crash de inicialização no banco de dados
+app.use('/api', async (req, res, next) => {
   try {
-    const { default: prisma } = await import('./utils/prisma');
-    await (prisma as any).$queryRaw`SELECT 1`;
-    res.json({ status: 'connected', database: 'postgres' });
-  } catch (error: any) {
-    res.status(500).json({ status: 'error', message: error.message });
+    // Roteamento manual para as rotas existentes
+    if (req.path.startsWith('/auth')) {
+      const authRoutes = require('./routes/auth.routes');
+      // Suporte para export default ou commonjs module.exports
+      const router = authRoutes.default || authRoutes;
+      return router(req, res, next);
+    }
+    if (req.path.startsWith('/exams')) {
+      const examRoutes = require('./routes/exam.routes');
+      const router = examRoutes.default || examRoutes;
+      return router(req, res, next);
+    }
+    if (req.path.startsWith('/questions')) {
+      const questionRoutes = require('./routes/question.routes');
+      const router = questionRoutes.default || questionRoutes;
+      return router(req, res, next);
+    }
+    next();
+  } catch (error) {
+    console.error('Lazy Route Error:', error);
+    res.status(500).json({ error: 'Failed to load module', detail: error.message });
   }
 });
 
-// --- ROTEAMENTO LAZY (Carregamento sob demanda para evitar crash global) ---
-app.use('/api/auth', async (req, res, next) => {
-  try {
-    const { default: router } = await import('./routes/auth.routes');
-    router(req, res, next);
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to load Auth module', detail: err.message });
-  }
-});
-
-app.use('/api/exams', async (req, res, next) => {
-  try {
-    const { default: router } = await import('./routes/exam.routes');
-    router(req, res, next);
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to load Exams module', detail: err.message });
-  }
-});
-
-app.use('/api/questions', async (req, res, next) => {
-  try {
-    const { default: router } = await import('./routes/question.routes');
-    router(req, res, next);
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to load Questions module', detail: err.message });
-  }
-});
-
-app.use('/api/flashcards', async (req, res, next) => {
-  try {
-    const { default: router } = await import('./routes/flashcard.routes');
-    router(req, res, next);
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to load Flashcards module', detail: err.message });
-  }
-});
-
-app.use('/api/plans', async (req, res, next) => {
-  try {
-    const { default: router } = await import('./routes/plan.routes');
-    router(req, res, next);
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to load StudyPlan module', detail: err.message });
-  }
-});
-
-// Fallback para rotas não encontradas
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found in Souconcursado API' });
-});
-
-const PORT = process.env.PORT || 3001;
-// CRITICAL: NEVER call app.listen() on Vercel as it crashes the Serverless Function
-if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
+// Prevenção de Listen na Vercel (Crash de porta)
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
-    console.log(`[SERVER] Running isolated boot on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
-export default app;
+module.exports = app;
