@@ -19,6 +19,11 @@ export default function FlashcardsPage() {
   const [targetMinutes, setTargetMinutes] = useState(30);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [showGenModal, setShowGenModal] = useState(false);
+  const [genTopic, setGenTopic] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [availableTopics, setAvailableTopics] = useState<string[]>([]);
+  const [genLevel, setGenLevel] = useState("beginner");
 
   useEffect(() => {
     if (startTime && !sessionFinished) {
@@ -106,10 +111,7 @@ export default function FlashcardsPage() {
     }
   };
 
-  const [showGenModal, setShowGenModal] = useState(false);
-  const [genTopic, setGenTopic] = useState("");
-  const [generating, setGenerating] = useState(false);
-  const [availableTopics, setAvailableTopics] = useState<string[]>([]);
+
 
   const fetchTopics = async () => {
     try {
@@ -142,7 +144,7 @@ export default function FlashcardsPage() {
     );
   }
 
-  const [genLevel, setGenLevel] = useState("beginner");
+
 
   const handleGenerate = async () => {
     if (!genTopic.trim()) return;
