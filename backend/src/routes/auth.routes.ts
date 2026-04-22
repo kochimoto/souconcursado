@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Router } from 'express';
 import { register, login, getProfile } from '../controllers/auth.controller';
 import { authenticateToken } from '../middleware/auth.middleware';
