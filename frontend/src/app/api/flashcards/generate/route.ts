@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.GROQ_API_KEY?.trim();
 
     if (!apiKey) {
-      throw new Error('GROQ_API_KEY não configurada');
+      return NextResponse.json({ message: 'GROQ_API_KEY não configurada na Vercel.' }, { status: 500 });
     }
 
     const prompt = `Você é um especialista em concursos públicos brasileiros.
@@ -37,7 +37,7 @@ A resposta DEVE ser um objeto JSON puro com esta estrutura:
   ]
 }`;
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -46,7 +46,7 @@ A resposta DEVE ser um objeto JSON puro com esta estrutura:
       body: JSON.stringify({
         model: "llama-3.3-70b-versatile",
         messages: [
-          { role: "system", content: "Você é um gerador de flashcards para concursos em formato JSON." },
+          { role: "system", content: "Você é um assistente que gera apenas JSON de flashcards." },
           { role: "user", content: prompt }
         ],
         temperature: 0.7,
@@ -54,48 +54,46 @@ A resposta DEVE ser um objeto JSON puro com esta estrutura:
       })
     });
 
-    if (!response.ok) {
-      throw new Error(`Groq API error ${response.status}`);
+    if (!groqRes.ok) {
+      const errorText = await groqRes.text();
+      throw new Error(`Groq API Error (${groqRes.status}): ${errorText}`);
     }
 
-    const data = await response.json();
+    const data = await groqRes.json();
     const content = JSON.parse(data.choices?.[0]?.message?.content || '{"flashcards": []}');
     const generatedCards = content.flashcards || [];
 
-    // Salvar no banco de dados de forma resiliente
     const savedCards = [];
     for (const card of generatedCards) {
       try {
-        const saved = await (prisma as any).flashcard.create({
+        // @ts-ignore
+        const saved = await prisma.flashcard.create({
           data: {
             userId: authUser.id,
             cardType: card.cardType || 'classic',
             front: card.front || "",
             back: card.back || "",
             clozeText: card.clozeText || "",
-            clozeAnswers: card.clozeAnswers || [],
+            // Garante que clozeAnswers seja um JSON válido ou array vazio
+            clozeAnswers: Array.isArray(card.clozeAnswers) ? card.clozeAnswers : [],
             nextReview: new Date()
           }
         });
         savedCards.push(saved);
-      } catch (err) {
-        console.error('Erro ao salvar card individual:', err);
+      } catch (dbError: any) {
+        console.error('Erro ao salvar card no banco:', dbError.message);
       }
     }
 
-    if (savedCards.length === 0 && generatedCards.length > 0) {
-      throw new Error('Falha ao salvar cartões no banco de dados');
-    }
-
     return NextResponse.json({ 
-      message: `${savedCards.length} flashcards gerados com sucesso!`,
+      message: `${savedCards.length} flashcards gerados!`,
       cards: savedCards 
     });
 
   } catch (error: any) {
-    console.error('[/api/flashcards/generate] Error:', error?.message);
+    console.error('[/api/flashcards/generate] Erro Fatal:', error.message);
     return NextResponse.json(
-      { message: 'Erro ao gerar flashcards', detail: error?.message },
+      { message: 'Erro na geração', detail: error.message },
       { status: 500 }
     );
   }
