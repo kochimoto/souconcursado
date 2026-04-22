@@ -13,9 +13,10 @@ export async function GET(request: NextRequest) {
   const level = parseInt(searchParams.get('level') || '1');
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey) {
-      throw new Error('GEMINI_API_KEY não configurada');
+      console.error('[/api/questions/adaptive] Erro: GEMINI_API_KEY não encontrada nas variáveis de ambiente.');
+      throw new Error('Configuração de IA ausente no servidor.');
     }
 
     const difficulty = level > 7 ? 'Difícil' : level > 4 ? 'Médio' : 'Fácil';
