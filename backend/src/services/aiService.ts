@@ -2,10 +2,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: "v1" });
 
 export const generateAdaptiveQuestion = async (userLevel: number, topic: string) => {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
   const prompt = `
     Você é um especialista em concursos públicos brasileiros.
     Gere uma questão de múltipla escolha inédita sobre o tema: "${topic}".
