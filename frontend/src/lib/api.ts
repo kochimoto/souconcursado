@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
+  // Usa caminho relativo (/api) para aproveitar os Route Handlers nativos do Next.js
+  // sem precisar de CORS. NEXT_PUBLIC_API_URL pode sobrescrever em ambientes customizados.
+  baseURL: process.env.NEXT_PUBLIC_API_URL || '/api',
 });
 
 // Request interceptor to add token
