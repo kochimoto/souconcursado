@@ -1,8 +1,7 @@
-// Teste de Isolamento Absoluto
-export default function handler(req: any, res: any) {
-  res.status(200).json({ 
-    status: "ok", 
-    message: "O motor da Vercel está funcionando",
-    time: new Date().toISOString()
-  });
-}
+import app from '../src/index';
+
+/**
+ * Ponto de entrada nativo para a Vercel.
+ * Redireciona todas as requisições para o app Express em /src/index.ts.
+ */
+export default app;

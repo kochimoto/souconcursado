@@ -5,13 +5,13 @@
     "lib": ["es2020"],
     "types": ["node"],
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "./",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "typeRoots": ["./node_modules/@types"],
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*", "src/declarations.d.ts"],
+  "include": ["src/**/*", "api/**/*", "src/declarations.d.ts"],
   "exclude": ["node_modules"]
 }
