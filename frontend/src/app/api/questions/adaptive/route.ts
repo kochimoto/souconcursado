@@ -38,9 +38,9 @@ Responda SOMENTE com JSON válido:
 
 correctOption deve ser o índice (0-3) da opção correta.`;
 
-    // Usando gemini-pro-latest que tem maior probabilidade de ter cota no plano gratuito
-    const modelName = "gemini-pro-latest";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    // Tentando v1 estável com gemini-1.5-flash, caso a cota do v1beta esteja zerada
+    const modelName = "gemini-1.5-flash";
+    const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
       method: 'POST',
