@@ -37,7 +37,7 @@ A resposta DEVE ser estritamente um JSON no formato abaixo, sem nenhum texto ant
 }`;
 
     const modelName = "gemini-1.5-flash";
-    const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
       method: 'POST',
