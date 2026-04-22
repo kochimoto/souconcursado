@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(exams);
   } catch (error: any) {
-    return NextResponse.json({ message: 'Error fetching exams' }, { status: 500 });
+    console.error('[/api/exams] Error:', error?.message, error?.code);
+    return NextResponse.json({ message: 'Error fetching exams', detail: error?.message }, { status: 500 });
   }
 }
