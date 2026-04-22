@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, RotateCcw, CheckCircle2, AlertCircle, Loader2, Sparkles, ChevronRight } from "lucide-react";
+import { Zap, RotateCcw, CheckCircle2, AlertCircle, Loader2, Sparkles, ChevronRight, Clock } from "lucide-react";
 import api from "@/lib/api";
+import { cn } from "@/lib/utils";
 import ClozeCard from "@/components/ClozeCard";
 
 export default function FlashcardsPage() {
@@ -14,6 +15,31 @@ export default function FlashcardsPage() {
   const [currentCardIdx, setCurrentCardIdx] = useState(0);
   const [showRatings, setShowRatings] = useState(false);
   const [sessionFinished, setSessionFinished] = useState(false);
+  const [showTimerModal, setShowTimerModal] = useState(true);
+  const [targetMinutes, setTargetMinutes] = useState(30);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [elapsedMinutes, setElapsedMinutes] = useState(0);
+
+  useEffect(() => {
+    if (startTime && !sessionFinished) {
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const diff = Math.floor((now - startTime) / 60000);
+        setElapsedMinutes(diff);
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [startTime, sessionFinished]);
+
+  const saveStudyTime = async () => {
+    if (!startTime) return;
+    try {
+      const total = Math.max(1, elapsedMinutes);
+      await api.post("/study/track", { minutes: total });
+    } catch (err) {
+      console.error("Erro ao salvar tempo:", err);
+    }
+  };
 
   useEffect(() => {
     fetchInitialData();
@@ -73,6 +99,7 @@ export default function FlashcardsPage() {
         // Finished the current stack
         setCards([]);
         setSessionFinished(true);
+        saveStudyTime();
       }
     } catch (error) {
       console.error("Erro ao salvar avaliação:", error);
@@ -120,14 +147,24 @@ export default function FlashcardsPage() {
     );
   }
 
+  const [genLevel, setGenLevel] = useState("beginner");
+
   const handleGenerate = async () => {
     if (!genTopic.trim()) return;
     setGenerating(true);
     try {
-      await api.post("/flashcards/generate", { topic: genTopic });
+      const quantityMap: Record<string, number> = {
+        beginner: 30,
+        medium: 50,
+        expert: 100
+      };
+      await api.post("/flashcards/generate", { 
+        topic: genTopic,
+        quantity: quantityMap[genLevel]
+      });
       setShowGenModal(false);
       fetchInitialData(); // Reload stats and cards
-      alert(`Flashcards de ${genTopic} gerados com sucesso!`);
+      alert(`Flashcards de ${genTopic} (${quantityMap[genLevel]} cards) gerados com sucesso!`);
     } catch (error) {
       console.error("Erro ao gerar:", error);
       alert("Erro ao gerar flashcards. Tente novamente.");
@@ -204,11 +241,11 @@ export default function FlashcardsPage() {
                 </div>
 
                 <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-2">Assunto Sugerido</p>
-                <div className="relative group">
+                <div className="relative group mb-6">
                   <select 
                     value={genTopic}
                     onChange={(e) => setGenTopic(e.target.value)}
-                    className="w-full px-6 py-5 bg-muted rounded-2xl border-2 border-transparent focus:border-primary outline-none font-bold text-sm appearance-none cursor-pointer group-hover:bg-muted/80 transition-all mb-8"
+                    className="w-full px-6 py-5 bg-muted rounded-2xl border-2 border-transparent focus:border-primary outline-none font-bold text-sm appearance-none cursor-pointer group-hover:bg-muted/80 transition-all"
                   >
                     {availableTopics.length > 0 ? (
                       availableTopics.map(topic => (
@@ -218,9 +255,22 @@ export default function FlashcardsPage() {
                       <option disabled>Nenhum assunto no plano</option>
                     )}
                   </select>
-                  <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none mt-[-16px]">
-                    <ChevronRight className="h-4 w-4 text-muted-foreground rotate-90" />
-                  </div>
+                </div>
+
+                <p className="text-xs font-black uppercase text-muted-foreground tracking-widest mb-2">Seu Nível no Assunto</p>
+                <div className="grid grid-cols-3 gap-2 mb-8">
+                   {["beginner", "medium", "expert"].map((lvl) => (
+                     <button
+                      key={lvl}
+                      onClick={() => setGenLevel(lvl)}
+                      className={cn(
+                        "py-3 rounded-xl text-[10px] font-black uppercase tracking-tighter border-2 transition-all",
+                        genLevel === lvl ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted border-transparent text-muted-foreground"
+                      )}
+                     >
+                       {lvl === "beginner" ? "30 Cards" : lvl === "medium" ? "50 Cards" : "100 Cards"}
+                     </button>
+                   ))}
                 </div>
 
                 <div className="flex gap-4">
@@ -236,7 +286,7 @@ export default function FlashcardsPage() {
                     className="flex-[2] py-4 bg-primary text-primary-foreground rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50"
                   >
                     {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-                    {generating ? "Processando..." : "Gerar Agora"}
+                    {generating ? "Gerando..." : "Gerar Agora"}
                   </button>
                 </div>
               </motion.div>
@@ -249,7 +299,56 @@ export default function FlashcardsPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-12 animate-fade-in text-center">
+      {/* Timer Selection Modal */}
+      <AnimatePresence>
+        {showTimerModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-background/95 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-card border-4 border-primary/10 rounded-[3rem] p-10 w-full max-w-lg shadow-2xl text-center"
+            >
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Clock className="h-10 w-10 text-primary" />
+              </div>
+              <h2 className="text-3xl font-black italic uppercase tracking-tighter mb-2">Meta de Tempo</h2>
+              <p className="text-muted-foreground font-bold mb-8">Quanto tempo você dedicará aos estudos agora?</p>
+              
+              <div className="grid grid-cols-2 gap-4 mb-10">
+                {[15, 30, 45, 60].map((min) => (
+                  <button
+                    key={min}
+                    onClick={() => setTargetMinutes(min)}
+                    className={cn(
+                      "py-6 rounded-3xl text-xl font-black italic border-4 transition-all",
+                      targetMinutes === min ? "bg-primary border-primary text-primary-foreground shadow-2xl shadow-primary/30 scale-105" : "bg-muted border-transparent text-muted-foreground hover:border-primary/20"
+                    )}
+                  >
+                    {min} min
+                  </button>
+                ))}
+              </div>
+
+              <button 
+                onClick={() => {
+                  setStartTime(Date.now());
+                  setShowTimerModal(false);
+                }}
+                className="w-full py-6 bg-primary text-primary-foreground rounded-3xl font-black uppercase italic tracking-widest text-lg shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-all"
+              >
+                Iniciar Sessão
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-col items-center gap-4">
+        {startTime && (
+          <div className="px-4 py-1.5 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest border border-primary/20 animate-pulse">
+            Tempo: {elapsedMinutes} / {targetMinutes} min
+          </div>
+        )}
         <div className="space-y-1">
           <h1 className="text-3xl font-black italic tracking-tighter uppercase">Revisão Diária</h1>
           <div className="flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground">

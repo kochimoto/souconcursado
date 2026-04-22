@@ -16,6 +16,31 @@ export default function StudyPage() {
   const [isAIMode, setIsAIMode] = useState(false);
   const [stats, setStats] = useState<any>(null);
   const [subjectParam, setSubjectParam] = useState("");
+  const [showTimerModal, setShowTimerModal] = useState(true);
+  const [targetMinutes, setTargetMinutes] = useState(30);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [elapsedMinutes, setElapsedMinutes] = useState(0);
+
+  useEffect(() => {
+    if (startTime && !isMetaConcluida) {
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const diff = Math.floor((now - startTime) / 60000);
+        setElapsedMinutes(diff);
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [startTime, isMetaConcluida]);
+
+  const saveStudyTime = async () => {
+    if (!startTime) return;
+    try {
+      const total = Math.max(1, elapsedMinutes);
+      await api.post("/study/track", { minutes: total });
+    } catch (err) {
+      console.error("Erro ao salvar tempo:", err);
+    }
+  };
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -157,7 +182,10 @@ export default function StudyPage() {
 
         <div className="flex flex-col gap-3 w-full max-w-sm">
           <button 
-            onClick={() => window.location.href = "/dashboard"}
+            onClick={() => {
+              saveStudyTime();
+              window.location.href = "/dashboard";
+            }}
             className="w-full px-8 py-5 bg-primary text-primary-foreground rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all"
           >
             Voltar ao Dashboard
@@ -178,8 +206,59 @@ export default function StudyPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-8 animate-fade-in">
+      {/* Timer Selection Modal */}
+      <AnimatePresence>
+        {showTimerModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-background/95 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-card border-4 border-primary/10 rounded-[3rem] p-10 w-full max-w-lg shadow-2xl text-center"
+            >
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Clock className="h-10 w-10 text-primary" />
+              </div>
+              <h2 className="text-3xl font-black italic uppercase tracking-tighter mb-2">Meta de Tempo</h2>
+              <p className="text-muted-foreground font-bold mb-8">Quanto tempo você dedicará às questões agora?</p>
+              
+              <div className="grid grid-cols-2 gap-4 mb-10">
+                {[15, 30, 45, 60].map((min) => (
+                  <button
+                    key={min}
+                    onClick={() => setTargetMinutes(min)}
+                    className={cn(
+                      "py-6 rounded-3xl text-xl font-black italic border-4 transition-all",
+                      targetMinutes === min ? "bg-primary border-primary text-primary-foreground shadow-2xl shadow-primary/30 scale-105" : "bg-muted border-transparent text-muted-foreground hover:border-primary/20"
+                    )}
+                  >
+                    {min} min
+                  </button>
+                ))}
+              </div>
+
+              <button 
+                onClick={() => {
+                  setStartTime(Date.now());
+                  setShowTimerModal(false);
+                }}
+                className="w-full py-6 bg-primary text-primary-foreground rounded-3xl font-black uppercase italic tracking-widest text-lg shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-all"
+              >
+                Iniciar Sessão
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Progress Bar Header */}
       <div className="space-y-4">
+        {startTime && (
+          <div className="flex items-center gap-2 mb-2">
+            <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[9px] font-black uppercase tracking-widest border border-primary/20 animate-pulse">
+              Tempo: {elapsedMinutes} / {targetMinutes} min
+            </div>
+          </div>
+        )}
         <div className="flex justify-between items-end">
           <div className="space-y-1">
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Progresso no Nível {stats?.currentLevel || 1}</p>

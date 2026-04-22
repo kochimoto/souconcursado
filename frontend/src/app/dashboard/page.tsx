@@ -31,9 +31,21 @@ export default function Dashboard() {
     flashcards: 0
   });
 
+  const [flashcardStats, setFlashcardStats] = useState<any>(null);
+
   useEffect(() => {
     fetchData();
+    fetchFlashcardStats();
   }, []);
+
+  const fetchFlashcardStats = async () => {
+    try {
+      const response = await api.get("/flashcards/stats");
+      setFlashcardStats(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar stats de flashcards:", error);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -53,10 +65,14 @@ export default function Dashboard() {
       const totalCorrect = statsRes.data.reduce((acc: number, s: any) => acc + s.totalCorrect, 0);
       const avgAccuracy = totalSolved > 0 ? Math.round((totalCorrect / totalSolved) * 100) : 0;
       
+      // Study hours from user profile (minutes to hours)
+      const studyMinutes = profileRes.data?.studyTimeMinutes || 0;
+      const studyHours = Math.round((studyMinutes / 60) * 10) / 10;
+      
       setOverallStats({
         solved: totalSolved,
         accuracy: avgAccuracy,
-        hours: plansRes.data.reduce((acc: number, p: any) => acc + (p.totalHours || 0), 0),
+        hours: studyHours,
         flashcards: 0
       });
     } catch (error) {
@@ -70,7 +86,7 @@ export default function Dashboard() {
     { label: "Questões Resolvidas", value: overallStats.solved, icon: <CheckCircle2 className="text-green-500" /> },
     { label: "Taxa de Acerto", value: `${overallStats.accuracy}%`, icon: <TrendingUp className="text-blue-500" /> },
     { label: "Horas de Estudo", value: `${overallStats.hours}h`, icon: <Clock className="text-purple-500" /> },
-    { label: "Flashcards Meta", value: "0/30", icon: <Zap className="text-yellow-500" /> },
+    { label: "Flashcards Meta", value: `${flashcardStats?.todayReviews || 0}/${flashcardStats?.dailyGoal || 30}`, icon: <Zap className="text-yellow-500" /> },
   ];
 
   if (loading) {
@@ -254,11 +270,15 @@ export default function Dashboard() {
           <div className="p-8 bg-card border-2 rounded-[3.5rem] shadow-xl shadow-primary/5 overflow-hidden relative">
             <h3 className="text-xl font-black italic uppercase tracking-tighter mb-6">Próxima Revisão</h3>
             <div className="space-y-4 relative z-10">
-               <div className="p-4 bg-indigo-600/5 rounded-2xl border border-indigo-600/10">
-                  <p className="text-[10px] font-black uppercase text-indigo-600 tracking-widest mb-1">Informática</p>
-                  <p className="text-sm font-bold">Hardware e Redes</p>
-                  <p className="text-xs text-muted-foreground mt-2">12 cartões hoje</p>
-               </div>
+               {flashcardStats?.subjectsSummary?.length > 0 ? flashcardStats.subjectsSummary.map((item: any, i: number) => (
+                 <div key={i} className="p-4 bg-indigo-600/5 rounded-2xl border border-indigo-600/10">
+                    <p className="text-[10px] font-black uppercase text-indigo-600 tracking-widest mb-1">{item.subject}</p>
+                    <p className="text-sm font-bold">Resumo Pendente</p>
+                    <p className="text-xs text-muted-foreground mt-2">{item.count} cartões hoje</p>
+                 </div>
+               )) : (
+                 <p className="text-sm text-muted-foreground font-bold italic p-4 text-center">Nenhum cartão para revisar agora.</p>
+               )}
             </div>
             <Zap className="h-24 w-24 text-indigo-600/5 absolute -right-6 -bottom-6" />
           </div>

@@ -15,7 +15,8 @@ export async function GET(request: NextRequest) {
       select: {
         id: true, email: true, name: true, age: true, city: true, state: true,
         targetExam: true, xp: true, level: true, rankingPoints: true,
-        alreadyTaken: true, subjectLevels: true, createdAt: true
+        alreadyTaken: true, subjectLevels: true, createdAt: true,
+        studyTimeMinutes: true
       }
     });
 

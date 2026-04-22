@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   if (!authUser) return unauthorized();
 
   try {
-    const { topic } = await request.json();
+    const { topic, quantity = 5 } = await request.json();
     const apiKey = process.env.GROQ_API_KEY?.trim();
 
     if (!apiKey) {
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     const prompt = `Você é um especialista em concursos públicos brasileiros.
-Gere 5 flashcards de alta qualidade sobre o tema: "${topic}".
+Gere ${quantity} flashcards de alta qualidade sobre o tema: "${topic}".
 Misture cartões clássicos (frente/verso) e cartões Cloze (lacunas).
 
 A resposta DEVE ser um objeto JSON puro com esta estrutura:

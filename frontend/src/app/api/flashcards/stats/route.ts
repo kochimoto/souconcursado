@@ -24,7 +24,36 @@ export async function GET(request: NextRequest) {
       where: { userId: authUser.id },
     });
 
-    return NextResponse.json({ todayReviews, dailyGoal: 30, totalCards });
+    // Busca resumo por matéria (agrupado)
+    // @ts-ignore
+    const allDueCards = await prisma.flashcard.findMany({
+      where: {
+        userId: authUser.id,
+        nextReview: { lte: new Date() }
+      },
+      select: { 
+        id: true,
+        question: { select: { subject: true } } 
+      }
+    });
+
+    const summary: Record<string, number> = {};
+    allDueCards.forEach((card: any) => {
+      const sub = card.question?.subject || "Geral";
+      summary[sub] = (summary[sub] || 0) + 1;
+    });
+
+    const subjectsSummary = Object.entries(summary).map(([subject, count]) => ({
+      subject,
+      count
+    }));
+
+    return NextResponse.json({ 
+      todayReviews, 
+      dailyGoal: 30, 
+      totalCards,
+      subjectsSummary 
+    });
   } catch (error: any) {
     console.error('[Stats] Erro ao buscar estatísticas de flashcards:', error);
     return NextResponse.json({ message: 'Error fetching stats', detail: error.message }, { status: 500 });
