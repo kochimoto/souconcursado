@@ -18,23 +18,26 @@ export default function FlashcardsPage() {
   const [showTimerModal, setShowTimerModal] = useState(true);
   const [targetMinutes, setTargetMinutes] = useState(30);
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [elapsedMinutes, setElapsedMinutes] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
     if (startTime && !sessionFinished) {
       const interval = setInterval(() => {
         const now = Date.now();
-        const diff = Math.floor((now - startTime) / 60000);
-        setElapsedMinutes(diff);
-      }, 30000);
+        const diffInSeconds = Math.floor((now - startTime) / 1000);
+        setElapsedSeconds(diffInSeconds);
+      }, 1000);
       return () => clearInterval(interval);
     }
   }, [startTime, sessionFinished]);
 
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  const displaySeconds = elapsedSeconds % 60;
+
   const saveStudyTime = async () => {
     if (!startTime) return;
     try {
-      const total = Math.max(1, elapsedMinutes);
+      const total = Math.max(1, Math.floor(elapsedSeconds / 60));
       await api.post("/study/track", { minutes: total });
     } catch (err) {
       console.error("Erro ao salvar tempo:", err);
@@ -346,7 +349,7 @@ export default function FlashcardsPage() {
       <div className="flex flex-col items-center gap-4">
         {startTime && (
           <div className="px-4 py-1.5 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest border border-primary/20 animate-pulse">
-            Tempo: {elapsedMinutes} / {targetMinutes} min
+            Tempo: {elapsedMinutes}:{displaySeconds.toString().padStart(2, '0')} / {targetMinutes}:00
           </div>
         )}
         <div className="space-y-1">
