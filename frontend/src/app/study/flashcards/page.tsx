@@ -274,7 +274,6 @@ export default function FlashcardsPage() {
         {currentCard?.cardType === "cloze" ? (
           <ClozeCard 
             clozeText={currentCard.clozeText}
-            answers={currentCard.clozeAnswers}
             onComplete={() => setShowRatings(true)}
           />
         ) : (
