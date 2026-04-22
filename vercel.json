@@ -2,6 +2,10 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/api/ping",
+      "destination": "backend/api/ping.js"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "backend/api/index.ts"
     }
