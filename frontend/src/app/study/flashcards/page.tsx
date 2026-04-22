@@ -79,6 +79,10 @@ export default function FlashcardsPage() {
     }
   };
 
+  const [showGenModal, setShowGenModal] = useState(false);
+  const [genTopic, setGenTopic] = useState("");
+  const [generating, setGenerating] = useState(false);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -87,6 +91,22 @@ export default function FlashcardsPage() {
       </div>
     );
   }
+
+  const handleGenerate = async () => {
+    if (!genTopic.trim()) return;
+    setGenerating(true);
+    try {
+      await api.post("/flashcards/generate", { topic: genTopic });
+      setShowGenModal(false);
+      setGenTopic("");
+      fetchInitialData(); // Reload
+    } catch (error) {
+      console.error("Erro ao gerar:", error);
+      alert("Erro ao gerar flashcards. Tente novamente.");
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const metaAtingida = stats.todayReviews >= stats.dailyGoal;
 
@@ -104,7 +124,7 @@ export default function FlashcardsPage() {
         
         <div className="space-y-2">
           <h2 className="text-3xl font-black">{metaAtingida ? "Meta Batida!" : "Quase lá!"}</h2>
-          <p className="text-muted-foreground font-medium max-w-sm">
+          <p className="text-muted-foreground font-bold max-w-sm">
             {metaAtingida 
               ? "Você atingiu sua meta diária de 30 cartões! Conhecimento consolidado com sucesso." 
               : `Você revisou ${stats.todayReviews} cartões hoje. Sua meta é chegar em ${stats.dailyGoal}.`}
@@ -123,12 +143,62 @@ export default function FlashcardsPage() {
           )}
           
           <button 
+            onClick={() => setShowGenModal(true)}
+            className="w-full px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl shadow-indigo-600/20 hover:scale-105 transition-all flex items-center justify-center gap-2"
+          >
+            <Sparkles className="h-5 w-5" />
+            Gerar com IA
+          </button>
+
+          <button 
             onClick={() => window.location.href = "/dashboard"}
             className="w-full px-8 py-4 bg-muted text-muted-foreground rounded-2xl font-black hover:bg-muted/80 transition-all"
           >
             Voltar ao Dashboard
           </button>
         </div>
+
+        {/* Modal Simples de Geração */}
+        <AnimatePresence>
+          {showGenModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-card border-2 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl"
+              >
+                <h3 className="text-xl font-black italic uppercase tracking-tighter mb-4">Gerar Flashcards por IA</h3>
+                <p className="text-sm text-muted-foreground font-bold mb-6">Qual assunto você deseja memorizar agora?</p>
+                
+                <input 
+                  type="text"
+                  placeholder="Ex: Hardware e Redes"
+                  value={genTopic}
+                  onChange={(e) => setGenTopic(e.target.value)}
+                  className="w-full px-6 py-4 bg-muted rounded-2xl border-2 border-transparent focus:border-primary outline-none font-bold mb-6"
+                />
+
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setShowGenModal(false)}
+                    className="flex-1 py-4 font-black uppercase text-xs tracking-widest text-muted-foreground"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={handleGenerate}
+                    disabled={generating || !genTopic.trim()}
+                    className="flex-[2] py-4 bg-primary text-primary-foreground rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {generating ? "Gerando..." : "Gerar Agora"}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
