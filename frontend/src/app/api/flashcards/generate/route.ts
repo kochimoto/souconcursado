@@ -66,8 +66,10 @@ A resposta DEVE ser um objeto JSON puro com esta estrutura:
     const savedCards = [];
     for (const card of generatedCards) {
       try {
-        // @ts-ignore
-        const saved = await prisma.flashcard.create({
+        // Define a revisão para 5 minutos atrás para garantir que apareça na hora
+        const immediateReview = new Date(Date.now() - 300000);
+
+        const saved = await (prisma as any).flashcard.create({
           data: {
             userId: authUser.id,
             cardType: card.cardType || 'classic',
@@ -76,7 +78,7 @@ A resposta DEVE ser um objeto JSON puro com esta estrutura:
             clozeText: card.clozeText || "",
             // Garante que clozeAnswers seja um JSON válido ou array vazio
             clozeAnswers: Array.isArray(card.clozeAnswers) ? card.clozeAnswers : [],
-            nextReview: new Date()
+            nextReview: immediateReview
           }
         });
         savedCards.push(saved);

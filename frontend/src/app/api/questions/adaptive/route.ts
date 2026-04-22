@@ -1,6 +1,7 @@
 // frontend/src/app/api/questions/adaptive/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, unauthorized } from '@/lib/auth';
+import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,8 +16,24 @@ export async function GET(request: NextRequest) {
   try {
     const apiKey = process.env.GROQ_API_KEY?.trim();
     if (!apiKey) {
-      console.error('[/api/questions/adaptive] Erro: GROQ_API_KEY não encontrada.');
       throw new Error('Configuração de IA (Groq) ausente.');
+    }
+
+    // Busca ou cria um concurso genérico para as questões de IA
+    let aiExam = await (prisma as any).exam.findFirst({
+      where: { name: "Simulado Sou Concursado" }
+    });
+
+    if (!aiExam) {
+      aiExam = await (prisma as any).exam.create({
+        data: {
+          name: "Simulado Sou Concursado",
+          organization: "Inteligência Artificial",
+          area: "Geral",
+          level: "Superior",
+          status: "Gerada por IA"
+        }
+      });
     }
 
     const difficulty = level > 7 ? 'Difícil' : level > 4 ? 'Médio' : 'Fácil';
@@ -27,19 +44,15 @@ Dificuldade: ${difficulty} (nível de usuário ${level}/10).
 
 A resposta DEVE ser estritamente um JSON no formato abaixo, sem nenhum texto antes ou depois:
 {
-  "id": "ai_${Date.now()}",
   "text": "Enunciado completo da questão",
   "options": ["Opção A", "Opção B", "Opção C", "Opção D"],
   "correctOption": 0,
   "explanation": "Explicação detalhada do porquê a resposta está correta",
   "difficulty": "${difficulty}",
-  "subject": "${topic}",
-  "exam": { "name": "Questão Gerada por IA", "organization": "Groq Llama 3" }
-}
+  "subject": "${topic}"
+}`;
 
-Importante: correctOption deve ser o índice (0-3) da opção correta.`;
-
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -56,21 +69,30 @@ Importante: correctOption deve ser o índice (0-3) da opção correta.`;
       })
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('[/api/questions/adaptive] Groq API Error:', response.status, JSON.stringify(errorData));
-      throw new Error(`Groq API returned ${response.status}`);
+    if (!groqRes.ok) {
+      throw new Error(`Groq API Error: ${groqRes.status}`);
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    const data = await groqRes.json();
+    const content = JSON.parse(data.choices?.[0]?.message?.content || '{}');
     
-    if (!content) {
-      throw new Error('Groq retornou uma resposta vazia');
-    }
+    // Salva a questão no banco de dados para que o progresso funcione
+    const savedQuestion = await (prisma as any).question.create({
+      data: {
+        text: content.text,
+        options: content.options,
+        correctOption: content.correctOption,
+        explanation: content.explanation,
+        subject: content.subject || topic,
+        difficulty: content.difficulty || difficulty,
+        examId: aiExam.id
+      },
+      include: {
+        exam: true
+      }
+    });
 
-    const question = JSON.parse(content);
-    return NextResponse.json(question);
+    return NextResponse.json(savedQuestion);
   } catch (error: any) {
     console.error('[/api/questions/adaptive] Error:', error?.message);
     return NextResponse.json(

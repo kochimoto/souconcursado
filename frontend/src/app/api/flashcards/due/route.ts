@@ -11,8 +11,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const now = new Date();
-    // Adiciona um buffer de 1 minuto para garantir que cards recém-criados apareçam
-    const bufferTime = new Date(now.getTime() + 60000); 
+    // Aumenta o buffer para 5 minutos para evitar qualquer dessincronia
+    const bufferTime = new Date(now.getTime() + 300000); 
     
     const flashcards = await (prisma as any).flashcard.findMany({
       where: {
@@ -22,6 +22,8 @@ export async function GET(request: NextRequest) {
       include: { question: true },
       orderBy: { nextReview: 'asc' },
     });
+
+    console.log(`[Flashcards] Encontrados ${flashcards.length} cartões para o usuário ${authUser.id}`);
     return NextResponse.json(flashcards);
   } catch (error: any) {
     return NextResponse.json({ message: 'Error fetching due flashcards' }, { status: 500 });

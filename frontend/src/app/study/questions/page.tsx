@@ -105,8 +105,9 @@ export default function StudyPage() {
   const target = getLevelTarget(stats?.currentLevel || 1);
   const currentProgress = stats?.totalAnswered || 0;
   const progressPercent = Math.min(100, (currentProgress / target) * 100);
+  const isMetaConcluida = currentProgress >= target;
 
-  if (!question) {
+  if (!question && !isMetaConcluida) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 gap-4">
         <p className="text-xl font-bold">Nenhuma questão encontrada.</p>
@@ -116,6 +117,61 @@ export default function StudyPage() {
         >
           Tentar Novamente
         </button>
+      </div>
+    );
+  }
+
+  if (isMetaConcluida) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] p-8 text-center space-y-8 animate-fade-in">
+        <div className="relative">
+          <div className="w-32 h-32 bg-green-500/10 rounded-full flex items-center justify-center">
+            <CheckCircle2 className="h-16 w-16 text-green-500" />
+          </div>
+          <motion.div 
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="absolute -top-2 -right-2 bg-primary text-white p-3 rounded-2xl shadow-xl"
+          >
+            <Sparkles className="h-6 w-6" />
+          </motion.div>
+        </div>
+
+        <div className="space-y-4">
+          <h2 className="text-4xl font-black italic uppercase tracking-tighter">Missão Cumprida!</h2>
+          <p className="text-muted-foreground font-bold max-w-md mx-auto">
+            Você completou o ciclo de {target} questões de <span className="text-primary">{subjectParam}</span> no nível {target === 20 ? "Fácil" : target === 35 ? "Médio" : "Difícil"}.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
+          <div className="p-6 bg-card border-2 rounded-3xl">
+             <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Resolvidas</p>
+             <p className="text-2xl font-black">{currentProgress}</p>
+          </div>
+          <div className="p-6 bg-card border-2 rounded-3xl">
+             <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Nível Atual</p>
+             <p className="text-2xl font-black">{stats?.currentLevel || 1}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 w-full max-w-sm">
+          <button 
+            onClick={() => window.location.href = "/dashboard"}
+            className="w-full px-8 py-5 bg-primary text-primary-foreground rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all"
+          >
+            Voltar ao Dashboard
+          </button>
+          <button 
+            onClick={() => {
+              // Poderíamos incrementar o nível aqui se quiséssemos
+              window.location.reload();
+            }}
+            className="w-full px-8 py-5 bg-muted text-muted-foreground rounded-2xl font-black uppercase italic tracking-widest hover:bg-muted/80 transition-all"
+          >
+            Estudar Mais
+          </button>
+        </div>
       </div>
     );
   }
