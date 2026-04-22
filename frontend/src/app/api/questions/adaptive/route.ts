@@ -21,22 +21,20 @@ export async function GET(request: NextRequest) {
     const difficulty = level > 7 ? 'Difícil' : level > 4 ? 'Médio' : 'Fácil';
 
     const prompt = `Você é um especialista em concursos públicos brasileiros.
-Gere UMA questão de múltipla escolha sobre: "${topic}".
-Nível de dificuldade: ${difficulty} (nível ${level}/10).
+Gere UMA questão de múltipla escolha sobre o tema: "${topic}".
+Dificuldade: ${difficulty} (nível ${level}/10).
 
-Responda SOMENTE com JSON válido:
+A resposta DEVE ser estritamente um JSON no formato abaixo, sem nenhum texto antes ou depois:
 {
   "id": "ai_${Date.now()}",
-  "text": "Enunciado completo da questão",
+  "text": "Enunciado da questão",
   "options": ["Opção A", "Opção B", "Opção C", "Opção D"],
   "correctOption": 0,
-  "explanation": "Explicação detalhada da resposta correta",
+  "explanation": "Explicação da resposta",
   "difficulty": "${difficulty}",
   "subject": "${topic}",
   "exam": { "name": "Questão Gerada por IA", "organization": "Gemini" }
-}
-
-correctOption deve ser o índice (0-3) da opção correta.`;
+}`;
 
     const modelName = "gemini-1.5-flash";
     const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${apiKey}`;
@@ -45,11 +43,7 @@ correctOption deve ser o índice (0-3) da opção correta.`;
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          response_mime_type: "application/json"
-        }
+        contents: [{ parts: [{ text: prompt }] }]
       })
     });
 
@@ -65,7 +59,13 @@ correctOption deve ser o índice (0-3) da opção correta.`;
       throw new Error('IA retornou uma estrutura de resposta inesperada');
     }
 
-    const question = JSON.parse(text);
+    // Limpeza robusta: extrai apenas o conteúdo entre as primeiras e últimas chaves { }
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('IA não retornou um JSON válido');
+    }
+
+    const question = JSON.parse(jsonMatch[0]);
     return NextResponse.json(question);
   } catch (error: any) {
     console.error('[/api/questions/adaptive] Error:', error?.message);
