@@ -10,7 +10,6 @@ import {
   Zap, 
   ArrowRight,
   BookOpen,
-  History,
   Loader2,
   Medal,
   Target
@@ -24,6 +23,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [subjectStats, setSubjectStats] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
   const [overallStats, setOverallStats] = useState({
     solved: 0,
     accuracy: 0,
@@ -38,13 +38,15 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, plansRes] = await Promise.all([
+      const [statsRes, plansRes, profileRes] = await Promise.all([
         api.get("/questions/stats"),
-        api.get("/plans/me")
+        api.get("/plans/me"),
+        api.get("/auth/profile").catch(() => ({ data: null }))
       ]);
       
       setSubjectStats(statsRes.data);
       setPlans(plansRes.data);
+      if (profileRes.data) setProfile(profileRes.data);
       
       // Calculate overall stats
       const totalSolved = statsRes.data.reduce((acc: number, s: any) => acc + s.totalAnswered, 0);
@@ -55,7 +57,7 @@ export default function Dashboard() {
         solved: totalSolved,
         accuracy: avgAccuracy,
         hours: plansRes.data.reduce((acc: number, p: any) => acc + (p.totalHours || 0), 0),
-        flashcards: 0 // Will implement flashcard stats later
+        flashcards: 0
       });
     } catch (error) {
       console.error("Erro ao carregar dados do dashboard:", error);
@@ -99,7 +101,7 @@ export default function Dashboard() {
              </div>
              <div>
                 <p className="text-[10px] font-black uppercase text-muted-foreground leading-none">Nível</p>
-                <p className="text-xl font-black italic">{user?.level || 1}</p>
+                <p className="text-xl font-black italic">{profile?.level ?? user?.level ?? 1}</p>
              </div>
           </div>
           <div className="p-2 px-5 bg-card border-2 border-yellow-500/30 rounded-2xl flex items-center gap-3">
@@ -108,7 +110,7 @@ export default function Dashboard() {
              </div>
              <div>
                 <p className="text-[10px] font-black uppercase text-muted-foreground leading-none">XP</p>
-                <p className="text-xl font-black italic">{user?.xp || 0}</p>
+                <p className="text-xl font-black italic">{profile?.xp ?? user?.xp ?? 0}</p>
              </div>
           </div>
         </div>

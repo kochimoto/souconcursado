@@ -89,7 +89,7 @@ export default function StudyPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 gap-4">
         <p className="text-xl font-bold">Nenhuma questão encontrada.</p>
         <button 
-          onClick={fetchQuestion}
+          onClick={() => fetchQuestion()}
           className="px-6 py-2 bg-primary text-primary-foreground rounded-full font-bold"
         >
           Tentar Novamente
@@ -217,7 +217,7 @@ export default function StudyPage() {
 
           {isSubmitted && (
             <button 
-              onClick={fetchQuestion}
+              onClick={() => fetchQuestion()}
               className="flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-full font-bold shadow-xl shadow-blue-500/20 hover:scale-105 transition-all"
             >
               Próxima Questão

@@ -204,30 +204,38 @@ export default function StudyPlanDetails({ params }: { params: Promise<{ planId:
               </div>
            </div>
 
-           {[1, 2, 3, 4].map((week) => (
-             <div key={week} className="space-y-4">
-                <h4 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-3">
-                   <span className="w-10 h-10 bg-muted rounded-full flex items-center justify-center not-italic font-bold text-sm">{week}ª</span>
-                   Semana
-                </h4>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                   {(plan.weeklySchedule as any[]).filter(s => s.week === week).map((item, j) => (
-                     <div key={j} className="p-5 bg-card border-2 rounded-3xl hover:border-primary/20 transition-all group">
-                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter mb-2">{item.subject}</p>
-                        <div className="flex justify-between items-center">
-                           <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-primary" />
-                              <span className="text-sm font-bold">{item.hours}h</span>
-                           </div>
-                           <span className="text-[9px] font-black uppercase italic px-2 py-0.5 bg-muted rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                              {item.targetDifficulty}
-                           </span>
-                        </div>
-                     </div>
-                   ))}
-                </div>
+           {Array.isArray(plan.weeklySchedule) && plan.weeklySchedule.length > 0 ? (
+             [1, 2, 3, 4].map((week) => (
+               <div key={week} className="space-y-4">
+                  <h4 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-3">
+                     <span className="w-10 h-10 bg-muted rounded-full flex items-center justify-center not-italic font-bold text-sm">{week}ª</span>
+                     Semana
+                  </h4>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                     {(plan.weeklySchedule as any[]).filter(s => s.week === week).map((item, j) => (
+                       <div key={j} className="p-5 bg-card border-2 rounded-3xl hover:border-primary/20 transition-all group">
+                          <p className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter mb-2">{item.subject}</p>
+                          <div className="flex justify-between items-center">
+                             <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-primary" />
+                                <span className="text-sm font-bold">{item.hours}h</span>
+                             </div>
+                             <span className="text-[9px] font-black uppercase italic px-2 py-0.5 bg-muted rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                {item.targetDifficulty}
+                             </span>
+                          </div>
+                       </div>
+                     ))}
+                  </div>
+               </div>
+             ))
+           ) : (
+             <div className="p-8 text-center bg-card border-2 border-dashed rounded-[2rem] space-y-3">
+               <Calendar className="h-10 w-10 text-muted-foreground mx-auto opacity-30" />
+               <p className="font-bold text-muted-foreground">Cronograma semanal ainda não gerado.</p>
+               <p className="text-xs text-muted-foreground">Sincronize seu progresso para atualizar o plano.</p>
              </div>
-           ))}
+           )}
         </div>
       )}
     </div>
