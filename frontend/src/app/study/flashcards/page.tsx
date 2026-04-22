@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, RotateCcw, CheckCircle2, AlertCircle, Loader2, Sparkles } from "lucide-react";
+import { Zap, RotateCcw, CheckCircle2, AlertCircle, Loader2, Sparkles, ChevronRight } from "lucide-react";
 import api from "@/lib/api";
 import ClozeCard from "@/components/ClozeCard";
 
