@@ -38,7 +38,6 @@ Responda SOMENTE com JSON válido:
 
 correctOption deve ser o índice (0-3) da opção correta.`;
 
-    // Tentando v1 estável com gemini-1.5-flash, caso a cota do v1beta esteja zerada
     const modelName = "gemini-1.5-flash";
     const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${apiKey}`;
     
@@ -48,7 +47,8 @@ correctOption deve ser o índice (0-3) da opção correta.`;
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
-          responseMimeType: "application/json"
+          temperature: 0.7,
+          response_mime_type: "application/json"
         }
       })
     });
@@ -66,7 +66,6 @@ correctOption deve ser o índice (0-3) da opção correta.`;
     }
 
     const question = JSON.parse(text);
-    return NextResponse.json(question);
     return NextResponse.json(question);
   } catch (error: any) {
     console.error('[/api/questions/adaptive] Error:', error?.message);
