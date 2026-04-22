@@ -21,6 +21,11 @@ export default function StudyPage() {
   const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
 
+  const target = getLevelTarget(stats?.currentLevel || 1);
+  const currentProgress = stats?.totalAnswered || 0;
+  const progressPercent = Math.min(100, (currentProgress / target) * 100);
+  const isMetaConcluida = currentProgress >= target;
+
   useEffect(() => {
     if (startTime && !isMetaConcluida) {
       const interval = setInterval(() => {
@@ -127,10 +132,7 @@ export default function StudyPage() {
     );
   }
 
-  const target = getLevelTarget(stats?.currentLevel || 1);
-  const currentProgress = stats?.totalAnswered || 0;
-  const progressPercent = Math.min(100, (currentProgress / target) * 100);
-  const isMetaConcluida = currentProgress >= target;
+
 
   if (!question && !isMetaConcluida) {
     return (
