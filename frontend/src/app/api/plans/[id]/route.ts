@@ -7,14 +7,16 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authUser = verifyToken(request);
   if (!authUser) return unauthorized();
 
+  const { id } = await params;
+
   try {
     const plan = await (prisma as any).studyPlan.findFirst({
-      where: { id: params.id, userId: authUser.id },
+      where: { id, userId: authUser.id },
       include: { exam: true },
     });
 
@@ -27,16 +29,18 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authUser = verifyToken(request);
   if (!authUser) return unauthorized();
+
+  const { id } = await params;
 
   try {
     const { contentBlocks, progress } = await request.json();
 
     const updatedPlan = await (prisma as any).studyPlan.update({
-      where: { id: params.id },
+      where: { id },
       data: { contentBlocks, progress },
     });
 
