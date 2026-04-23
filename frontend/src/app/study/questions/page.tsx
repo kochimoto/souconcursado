@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, XCircle, Info, ArrowRight, BookOpen, Clock, Loader2, Sparkles, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
+import Link from "next/link";
 
 const getLevelTarget = (level: number) => {
   if (level <= 3) return 20; // Fácil
