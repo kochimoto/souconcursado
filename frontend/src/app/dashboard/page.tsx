@@ -55,35 +55,41 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, plansRes, profileRes, materialsRes] = await Promise.all([
+      const results = await Promise.allSettled([
         api.get("/questions/stats"),
         api.get("/plans/me"),
-        api.get("/auth/profile").catch(() => ({ data: null })),
+        api.get("/auth/profile"),
         api.get("/exams?area=Personalizado")
       ]);
       
-      setSubjectStats(statsRes.data);
-      setPlans(plansRes.data);
+      const statsRes = results[0].status === 'fulfilled' ? (results[0] as any).value : { data: [] };
+      const plansRes = results[1].status === 'fulfilled' ? (results[1] as any).value : { data: [] };
+      const profileRes = results[2].status === 'fulfilled' ? (results[2] as any).value : { data: null };
+      const materialsRes = results[3].status === 'fulfilled' ? (results[3] as any).value : { data: [] };
+
+      setSubjectStats(statsRes.data || []);
+      setPlans(plansRes.data || []);
       if (profileRes.data) setProfile(profileRes.data);
       setMaterials(materialsRes.data || []);
       
-      // Calculate overall stats
-      const totalSolved = statsRes.data.reduce((acc: number, s: any) => acc + s.totalAnswered, 0);
-      const totalCorrect = statsRes.data.reduce((acc: number, s: any) => acc + s.totalCorrect, 0);
-      const avgAccuracy = totalSolved > 0 ? Math.round((totalCorrect / totalSolved) * 100) : 0;
-      
-      // Study hours from user profile (minutes to hours)
-      const studyMinutes = profileRes.data?.studyTimeMinutes || 0;
-      const studyHours = Math.round((studyMinutes / 60) * 10) / 10;
-      
-      setOverallStats({
-        solved: totalSolved,
-        accuracy: avgAccuracy,
-        hours: studyHours,
-        flashcards: 0
-      });
+      // Calculate overall stats if stats available
+      if (statsRes.data && Array.isArray(statsRes.data)) {
+        const totalSolved = statsRes.data.reduce((acc: number, s: any) => acc + s.totalAnswered, 0);
+        const totalCorrect = statsRes.data.reduce((acc: number, s: any) => acc + s.totalCorrect, 0);
+        const avgAccuracy = totalSolved > 0 ? Math.round((totalCorrect / totalSolved) * 100) : 0;
+        
+        const studyMinutes = profileRes.data?.studyTimeMinutes || 0;
+        const studyHours = Math.round((studyMinutes / 60) * 10) / 10;
+        
+        setOverallStats({
+          solved: totalSolved,
+          accuracy: avgAccuracy,
+          hours: studyHours,
+          flashcards: 0
+        });
+      }
     } catch (error) {
-      console.error("Erro ao carregar dados do dashboard:", error);
+      console.error("Erro crítico ao carregar dados do dashboard:", error);
     } finally {
       setLoading(false);
     }
