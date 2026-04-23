@@ -22,6 +22,7 @@ export default function StudyPage() {
   const [isAIMode, setIsAIMode] = useState(false);
   const [stats, setStats] = useState<any>(null);
   const [subjectParam, setSubjectParam] = useState("");
+  const [subtopicParam, setSubtopicParam] = useState("");
   const [showTimerModal, setShowTimerModal] = useState(true);
   const [targetMinutes, setTargetMinutes] = useState(30);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -59,8 +60,10 @@ export default function StudyPage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const sub = urlParams.get('subject') || 'Direito Constitucional';
+    const subtopic = urlParams.get('subtopic') || "";
     setSubjectParam(sub);
-    fetchQuestion(sub);
+    setSubtopicParam(subtopic);
+    fetchQuestion(sub, false, subtopic);
     fetchStats(sub);
   }, []);
 
@@ -74,7 +77,7 @@ export default function StudyPage() {
     }
   };
 
-  const fetchQuestion = async (sub: string = subjectParam, forceAI = false) => {
+  const fetchQuestion = async (sub: string = subjectParam, forceAI = false, subtopic: string = subtopicParam) => {
     setLoading(true);
     setQuestion(null);
     setSelectedOption(null);
@@ -82,7 +85,7 @@ export default function StudyPage() {
     setShowExplanation(false);
 
     try {
-      const useAI = forceAI || isAIMode;
+      const useAI = forceAI || isAIMode || subtopic !== "";
 
       if (!useAI) {
         const response = await api.get('/questions', {
@@ -98,7 +101,11 @@ export default function StudyPage() {
       }
 
       const response = await api.get('/questions/adaptive', {
-        params: { topic: sub, level: stats?.currentLevel || 1 },
+        params: { 
+          topic: sub, 
+          level: stats?.currentLevel || 1,
+          subtopic: subtopic
+        },
       });
       setQuestion(response.data);
     } catch (error) {
@@ -298,11 +305,13 @@ export default function StudyPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black italic tracking-tighter uppercase">{question.subject}</h1>
-              {(question.id.startsWith('ai_') || isAIMode) && (
+              <h1 className="text-2xl font-black italic tracking-tighter uppercase">
+                {subtopicParam || question.subject}
+              </h1>
+              {(isAIMode || subtopicParam !== "") && (
                 <span className="flex items-center gap-1 px-2 py-0.5 bg-indigo-500/10 text-indigo-600 text-[9px] font-black uppercase rounded-full border border-indigo-500/20">
                   <Sparkles className="h-2 w-2" />
-                  Gerado por IA
+                  Biblioteca • Adaptativa
                 </span>
               )}
             </div>
