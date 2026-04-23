@@ -49,3 +49,24 @@ export async function PATCH(
     return NextResponse.json({ message: 'Erro ao atualizar plano' }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const authUser = verifyToken(request);
+  if (!authUser) return unauthorized();
+
+  const { id } = await params;
+
+  try {
+    await (prisma as any).studyPlan.delete({
+      where: { id, userId: authUser.id },
+    });
+
+    return NextResponse.json({ message: 'Plano excluído com sucesso' });
+  } catch (error: any) {
+    console.error('Erro ao excluir plano:', error);
+    return NextResponse.json({ message: 'Erro ao excluir plano' }, { status: 500 });
+  }
+}

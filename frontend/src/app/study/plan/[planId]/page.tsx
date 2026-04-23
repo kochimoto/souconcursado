@@ -12,18 +12,37 @@ import {
   RefreshCcw,
   ChevronRight,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  Trash2,
+  ChevronDown
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import api from "@/lib/api";
+
+const ENEM_SUBTOPICS: Record<string, string[]> = {
+  "Linguagens, Códigos e suas Tecnologias": [
+    "Interpretação de Texto", "Literatura Brasileira", "Artes e Cultura", "Educação Física", "Língua Estrangeira (Inglês/Espanhol)", "Gramática e Semântica"
+  ],
+  "Matemática e suas Tecnologias": [
+    "Razão e Proporção", "Geometria Plana e Espacial", "Estatística e Probabilidade", "Funções e Álgebra", "Aritmética e Logística", "Trigonometria"
+  ],
+  "Ciências da Natureza e suas Tecnologias": [
+    "Ecologia e Meio Ambiente", "Mecânica e Energia", "Química Orgânica e Inorgânica", "Genética e Biologia Molecular", "Fisiologia Humana", "Eletromagnetismo"
+  ],
+  "Ciências Humanas e suas Tecnologias": [
+    "História do Brasil", "Geografia Humana e Ambiental", "Sociologia e Filosofia Moderna", "Política e Cidadania", "Brasil Colônia e Império", "Geopolítica Mundial"
+  ]
+};
 
 export default function StudyPlanDetails({ params }: { params: Promise<{ planId: string }> }) {
   const { planId } = use(params);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [plan, setPlan] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"progress" | "schedule">("progress");
+  const [expandedBlock, setExpandedBlock] = useState<number | null>(null);
 
   useEffect(() => {
     fetchPlan();
@@ -53,6 +72,21 @@ export default function StudyPlanDetails({ params }: { params: Promise<{ planId:
        console.error("Erro ao sincronizar progresso:", error);
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleDeletePlan = async () => {
+    if (!confirm("Tem certeza que deseja excluir este plano de estudos? Esta ação é irreversível.")) return;
+    
+    setDeleting(true);
+    try {
+      await api.delete(`/plans/${planId}`);
+      window.location.href = "/dashboard";
+    } catch (error) {
+      console.error("Erro ao excluir plano:", error);
+      alert("Erro ao excluir o plano.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -88,14 +122,24 @@ export default function StudyPlanDetails({ params }: { params: Promise<{ planId:
             <p className="text-muted-foreground font-bold">Plano personalizado baseado no seu nível e desempenho real.</p>
           </div>
         </div>
-        <button 
-          onClick={syncProgress}
-          disabled={syncing}
-          className="flex items-center gap-2 px-6 py-4 bg-primary text-primary-foreground rounded-3xl font-black uppercase italic text-xs tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.05] transition-all disabled:opacity-50"
-        >
-          {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-          Sincronizar Progresso
-        </button>
+        
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <button 
+            onClick={handleDeletePlan}
+            disabled={deleting}
+            className="flex-1 md:flex-none p-4 bg-red-500/10 text-red-600 rounded-3xl hover:bg-red-500/20 transition-all border-2 border-red-500/10"
+          >
+            {deleting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Trash2 className="h-5 w-5" />}
+          </button>
+          <button 
+            onClick={syncProgress}
+            disabled={syncing}
+            className="flex-[3] md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-primary text-primary-foreground rounded-3xl font-black uppercase italic text-xs tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.05] transition-all disabled:opacity-50"
+          >
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+            Sincronizar Progresso
+          </button>
+        </div>
       </div>
 
       {/* Main Progress Bar */}
@@ -146,53 +190,83 @@ export default function StudyPlanDetails({ params }: { params: Promise<{ planId:
 
       {activeTab === "progress" ? (
         <div className="grid gap-4">
-          {(plan.contentBlocks as any[]).map((block, i) => (
-            <motion.div 
-              key={i}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="p-6 bg-card border-2 rounded-[2.5rem] flex flex-col md:flex-row md:items-center justify-between gap-6 hover:shadow-xl hover:shadow-primary/5 transition-all"
-            >
-              <div className="flex-1 space-y-4">
-                <div className="flex items-center gap-3">
-                  <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                    block.userLevel === 3 ? 'bg-yellow-500/10 text-yellow-600' : 
-                    block.userLevel === 2 ? 'bg-blue-500/10 text-blue-600' : 'bg-gray-500/10 text-gray-500'
-                  }`}>
-                    {block.userLevel === 1 ? "Iniciante" : block.userLevel === 2 ? "Intermediário" : "Avançado"}
-                  </span>
-                  <h3 className="text-xl font-black italic uppercase tracking-tighter">{block.subject}</h3>
-                </div>
-                
-                <div className="flex flex-wrap gap-4">
-                   <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      {block.weeklyHours}h/semana
-                   </div>
-                   <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
-                      <Target className="h-4 w-4" />
-                      Foco: {block.difficulty}
-                   </div>
-                   <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
-                      <TrendingUp className="h-4 w-4 text-green-500" />
-                      {block.correctAnswers}/{block.totalAnswers} acertos
-                   </div>
-                </div>
-              </div>
+          {(plan.contentBlocks as any[]).map((block, i) => {
+            const isExpanded = expandedBlock === i;
+            const subtopics = ENEM_SUBTOPICS[block.subject] || [];
 
-              <div className="flex items-center gap-4">
-                 <Link href={`/study/questions?subject=${block.subject}&difficulty=${block.difficulty}`}>
-                    <button className="flex-1 md:flex-none px-8 py-3 bg-primary text-primary-foreground rounded-2xl text-xs font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all">
-                       Estudar Agora
-                    </button>
-                 </Link>
-                 <div className="p-2 bg-muted rounded-full">
-                    {block.status === 'done' ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-                 </div>
-              </div>
-            </motion.div>
-          ))}
+            return (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="overflow-hidden bg-card border-2 rounded-[2.5rem] hover:shadow-xl hover:shadow-primary/5 transition-all"
+              >
+                <div 
+                  onClick={() => setExpandedBlock(isExpanded ? null : i)}
+                  className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 cursor-pointer"
+                >
+                  <div className="flex-1 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                        block.userLevel === 3 ? 'bg-yellow-500/10 text-yellow-600' : 
+                        block.userLevel === 2 ? 'bg-blue-500/10 text-blue-600' : 'bg-gray-500/10 text-gray-500'
+                      }`}>
+                        {block.userLevel === 1 ? "Iniciante" : block.userLevel === 2 ? "Intermediário" : "Avançado"}
+                      </span>
+                      <h3 className="text-xl font-black italic uppercase tracking-tighter">{block.subject}</h3>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-4">
+                       <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
+                          <Clock className="h-4 w-4" />
+                          {block.weeklyHours}h/semana
+                       </div>
+                       <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
+                          <Target className="h-4 w-4" />
+                          Foco: {block.difficulty}
+                       </div>
+                       <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
+                          <TrendingUp className="h-4 w-4 text-green-500" />
+                          {block.correctAnswers}/{block.totalAnswers} acertos
+                       </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <Link href={`/study/questions?subject=${block.subject}&difficulty=${block.difficulty}`}>
+                        <button className="flex-1 md:flex-none px-8 py-3 bg-primary text-primary-foreground rounded-2xl text-xs font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all">
+                          Estudar Agora
+                        </button>
+                    </Link>
+                    <div className="p-2 bg-muted rounded-full group-hover:bg-primary/10 transition-colors">
+                        {isExpanded ? <ChevronDown className="h-5 w-5 text-primary" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+                    </div>
+                  </div>
+                </div>
+
+                <AnimatePresence>
+                  {isExpanded && subtopics.length > 0 && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="px-6 pb-8 border-t border-dashed"
+                    >
+                      <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {subtopics.map((topic, idx) => (
+                          <div key={idx} className="flex items-center gap-3 p-3 bg-muted/30 rounded-2xl border border-transparent hover:border-primary/20 transition-all group">
+                            <div className="w-2 h-2 rounded-full bg-primary/30 group-hover:bg-primary transition-colors" />
+                            <span className="text-xs font-bold text-muted-foreground group-hover:text-foreground transition-colors">{topic}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
         </div>
       ) : (
         <div className="space-y-12">

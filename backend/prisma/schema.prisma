@@ -68,6 +68,7 @@ model Question {
   subject       String
   topic         String?
   difficulty    String    @default("Médio")
+  files         Json?
 
   examId        String
   exam          Exam      @relation(fields: [examId], references: [id])

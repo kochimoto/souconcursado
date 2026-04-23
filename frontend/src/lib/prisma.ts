@@ -24,9 +24,7 @@ function createPrismaClient(): PrismaClient {
 
     const pool = new Pool({
       connectionString,
-      ssl: { rejectUnauthorized: false },
-      // Desabilita prepared statements no nível do driver pg
-      // para compatibilidade com PgBouncer em transaction mode
+      ssl: false,
     });
 
     const adapter = new PrismaPg(pool);

@@ -332,11 +332,26 @@ export default function StudyPage() {
       </div>
 
       <div className="space-y-8">
-        <div className="p-8 bg-card border rounded-[2rem] shadow-sm">
+        <div className="p-8 bg-card border rounded-[2rem] shadow-sm space-y-6">
           <span className="inline-block px-3 py-1 mb-4 text-[10px] font-bold uppercase tracking-widest bg-muted rounded-full">
             Questão {question.id.split('-')[0].toUpperCase()}
           </span>
-          <p className="text-lg md:text-xl font-medium leading-relaxed">{question.text}</p>
+          <p className="text-lg md:text-xl font-medium leading-relaxed whitespace-pre-wrap">{question.text}</p>
+          
+          {question.files && Array.isArray(question.files) && question.files.length > 0 && (
+            <div className="grid gap-4 mt-6">
+              {(question.files as string[]).map((url, idx) => (
+                <div key={idx} className="relative rounded-2xl overflow-hidden border-2 border-muted group">
+                  <img 
+                    src={url} 
+                    alt={`Imagem da questão ${idx + 1}`}
+                    className="w-full h-auto object-contain max-h-[500px] hover:scale-[1.02] transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="space-y-3">
@@ -398,7 +413,7 @@ export default function StudyPage() {
                 className="flex items-center gap-2 px-6 py-3.5 bg-muted rounded-full font-bold hover:bg-muted/80 transition-all text-sm"
               >
                 <Info className="h-4 w-4" />
-                {showExplanation ? "Ocultar Comentário" : "Ver Comentário"}
+                {showExplanation ? "Ocultar Dica" : "Ver Dica do Professor"}
               </button>
             )}
           </div>
@@ -417,18 +432,40 @@ export default function StudyPage() {
         <AnimatePresence>
           {showExplanation && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="p-8 bg-muted/40 rounded-[2rem] border border-dashed border-muted-foreground/30"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="relative p-8 bg-gradient-to-br from-card to-muted/20 rounded-[2.5rem] border-2 border-primary/10 shadow-2xl overflow-hidden"
             >
-              <h4 className="font-bold flex items-center gap-2 mb-4">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                Dica do Professor
-              </h4>
-              <p className="text-muted-foreground leading-relaxed text-sm md:text-base italic">
-                {question.explanation || "Sem comentário disponível para esta questão."}
-              </p>
+              <div className="absolute top-0 right-0 p-8 opacity-5">
+                <Sparkles className="h-24 w-24 text-primary" />
+              </div>
+              
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
+                    <Sparkles className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-black italic uppercase tracking-tighter text-lg leading-none">Dica do Especialista</h4>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Análise Técnica da Questão</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <p className="text-muted-foreground leading-relaxed text-sm md:text-base font-medium">
+                    {question.explanation || "Esta questão exige uma análise detalhada do contexto apresentado e a aplicação direta dos conceitos da matéria. Foque na interpretação correta dos termos-chave."}
+                  </p>
+                  
+                  {question.id.startsWith('ai_') && (
+                    <div className="pt-4 border-t border-dashed border-primary/20">
+                      <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">
+                        Explicação gerada por inteligência artificial para este tópico.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

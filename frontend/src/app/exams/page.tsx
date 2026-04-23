@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, MapPin, Calendar, Building2, ChevronRight, Briefcase, Loader2, X, Info, Target, Landmark, AlertCircle } from "lucide-react";
+import { Search, MapPin, Calendar, Building2, ChevronRight, Briefcase, Loader2, X, Info, Target, Landmark, AlertCircle, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 
@@ -73,24 +73,45 @@ export default function ExamsPage() {
     searchTerm === "" || exam.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const areas = ["Todos", "Policial", "Jurídica", "Bancária", "Administrativa"];
+  const areas = ["Todos", "Policial", "Jurídica", "Bancária", "Administrativa", "Vestibular"];
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
       <div className="flex items-end justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-4xl font-black italic tracking-tighter uppercase">Concursos Públicos</h1>
-          <p className="text-muted-foreground font-medium italic">Editais reais monitorados em tempo integral.</p>
+          <h1 className="text-4xl font-black italic tracking-tighter uppercase">Concursos e Vestibulares</h1>
+          <p className="text-muted-foreground font-medium italic">Editais reais e provas anteriores monitoradas.</p>
         </div>
         
-        <button 
-          onClick={handleSync}
-          disabled={syncing}
-          className="flex items-center gap-2 px-6 py-3 bg-muted rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-muted/80 transition-all border-2 border-border"
-        >
-          {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Landmark className="h-4 w-4" />}
-          {syncing ? "Sincronizando..." : "Sincronizar"}
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-2 px-6 py-3 bg-muted rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-muted/80 transition-all border-2 border-border"
+          >
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Landmark className="h-4 w-4" />}
+            {syncing ? "Sincronizando..." : "Sincronizar"}
+          </button>
+
+          <button 
+            onClick={async () => {
+              setSyncing(true);
+              try {
+                await api.post("/exams/sync-enem");
+                await fetchExams();
+              } catch (error) {
+                console.error("Erro ao sincronizar Enem:", error);
+              } finally {
+                setSyncing(false);
+              }
+            }}
+            disabled={syncing}
+            className="flex items-center gap-2 px-6 py-3 bg-indigo-600/10 text-indigo-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-600/20 transition-all border-2 border-indigo-600/20"
+          >
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            Sincronizar Enem
+          </button>
+        </div>
       </div>
 
       {/* Filters */}

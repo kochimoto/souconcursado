@@ -83,10 +83,10 @@ export default function Dashboard() {
   };
 
   const stats = [
-    { label: "Questões Resolvidas", value: overallStats.solved, icon: <CheckCircle2 className="text-green-500" /> },
-    { label: "Taxa de Acerto", value: `${overallStats.accuracy}%`, icon: <TrendingUp className="text-blue-500" /> },
-    { label: "Horas de Estudo", value: `${overallStats.hours}h`, icon: <Clock className="text-purple-500" /> },
-    { label: "Flashcards Meta", value: `${flashcardStats?.todayReviews || 0}/${flashcardStats?.dailyGoal || 30}`, icon: <Zap className="text-yellow-500" /> },
+    { label: "Questões Resolvidas", value: overallStats.solved, icon: <CheckCircle2 className="text-green-500" />, href: "/dashboard/performance" },
+    { label: "Taxa de Acerto", value: `${overallStats.accuracy}%`, icon: <TrendingUp className="text-blue-500" />, href: "/dashboard/performance" },
+    { label: "Horas de Estudo", value: `${overallStats.hours}h`, icon: <Clock className="text-purple-500" />, href: "/dashboard/performance" },
+    { label: "Flashcards Meta", value: `${flashcardStats?.todayReviews || 0}/${flashcardStats?.dailyGoal || 30}`, icon: <Zap className="text-yellow-500" />, href: "/study/flashcards" },
   ];
 
   if (loading) {
@@ -135,20 +135,21 @@ export default function Dashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
-          <motion.div 
-            key={i}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="p-6 bg-card border-2 rounded-[2.5rem] shadow-sm hover:shadow-2xl hover:shadow-primary/5 hover:border-primary/20 transition-all group"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-muted rounded-2xl group-hover:bg-primary/10 transition-colors">{stat.icon}</div>
-              <BarChart2 className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">{stat.label}</p>
-            <p className="text-3xl font-black italic tracking-tighter">{stat.value}</p>
-          </motion.div>
+          <Link href={stat.href} key={i}>
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className="p-6 bg-card border-2 rounded-[2.5rem] shadow-sm hover:shadow-2xl hover:shadow-primary/5 hover:border-primary/20 transition-all group h-full cursor-pointer"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-muted rounded-2xl group-hover:bg-primary/10 transition-colors">{stat.icon}</div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+              </div>
+              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">{stat.label}</p>
+              <p className="text-3xl font-black italic tracking-tighter">{stat.value}</p>
+            </motion.div>
+          </Link>
         ))}
       </div>
 
