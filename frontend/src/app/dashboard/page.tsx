@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [subjectStats, setSubjectStats] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
+  const [materials, setMaterials] = useState<any[]>([]);
   const [overallStats, setOverallStats] = useState({
     solved: 0,
     accuracy: 0,
@@ -51,15 +52,17 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, plansRes, profileRes] = await Promise.all([
+      const [statsRes, plansRes, profileRes, materialsRes] = await Promise.all([
         api.get("/questions/stats"),
         api.get("/plans/me"),
-        api.get("/auth/profile").catch(() => ({ data: null }))
+        api.get("/auth/profile").catch(() => ({ data: null })),
+        api.get("/exams?area=Personalizado")
       ]);
       
       setSubjectStats(statsRes.data);
       setPlans(plansRes.data);
       if (profileRes.data) setProfile(profileRes.data);
+      setMaterials(materialsRes.data || []);
       
       // Calculate overall stats
       const totalSolved = statsRes.data.reduce((acc: number, s: any) => acc + s.totalAnswered, 0);
@@ -289,6 +292,31 @@ export default function Dashboard() {
                 </button>
               </Link>
             )}
+          </div>
+
+          {/* New Section: Meus Materiais */}
+          <div className="p-8 bg-card border-2 rounded-[3.5rem] shadow-xl shadow-primary/5">
+            <h3 className="text-xl font-black italic uppercase tracking-tighter mb-6 flex items-center gap-3">
+              <Sparkles className="h-6 w-6 text-indigo-600" />
+              Meus Materiais (IA)
+            </h3>
+            <div className="space-y-4">
+              {materials.length > 0 ? materials.map((material: any) => (
+                <Link href={`/study/questions?subject=${material.name.replace('Material: ', '')}&examId=${material.id}`} key={material.id}>
+                  <div className="group p-4 bg-indigo-500/5 rounded-2xl border border-transparent hover:border-indigo-500/20 transition-all cursor-pointer flex justify-between items-center">
+                    <div className="flex flex-col gap-1 overflow-hidden">
+                      <span className="text-xs font-black uppercase tracking-tight truncate pr-4">{material.name.replace('Material: ', '')}</span>
+                      <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Estudar agora</span>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 group-hover:text-white transition-all">
+                      <ArrowRight className="h-3 w-3" />
+                    </div>
+                  </div>
+                </Link>
+              )) : (
+                <p className="text-[10px] text-muted-foreground font-bold italic text-center py-4">Nenhum material processado.</p>
+              )}
+            </div>
           </div>
 
           <div className="p-8 bg-card border-2 rounded-[3.5rem] shadow-xl shadow-primary/5 overflow-hidden relative">

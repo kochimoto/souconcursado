@@ -84,23 +84,19 @@ ${context}`;
     const content = JSON.parse(resData.choices?.[0]?.message?.content || '{"flashcards":[], "questions":[]}');
     console.log('Conteúdo gerado pela IA:', content.flashcards?.length, 'flashcards,', content.questions?.length, 'questões');
 
-    // 4. Garantir que o "Exame" de materiais existe
-    console.log('Verificando/Criando exame de materiais...');
-    let materialExam = await (prisma as any).exam.findFirst({
-      where: { name: 'Meus Materiais' }
+    // 4. Criar um "Exame" específico para este PDF
+    const materialTitle = file.name.replace('.pdf', '').substring(0, 50);
+    console.log('Criando registro para o material:', materialTitle);
+    
+    const materialExam = await (prisma as any).exam.create({
+      data: {
+        name: `Material: ${materialTitle}`,
+        organization: 'Upload Pessoal',
+        area: 'Personalizado',
+        level: 'Vários',
+        status: 'Ativo'
+      }
     });
-
-    if (!materialExam) {
-      materialExam = await (prisma as any).exam.create({
-        data: {
-          name: 'Meus Materiais',
-          organization: 'Upload Pessoal',
-          area: 'Personalizado',
-          level: 'Vários',
-          status: 'Ativo'
-        }
-      });
-    }
 
     // 5. Salvar Flashcards
     console.log('Salvando flashcards...');
@@ -112,7 +108,8 @@ ${context}`;
             userId: authUser.id,
             cardType: 'classic',
             front: fc.front,
-            back: fc.back
+            back: fc.back,
+            // Opcional: associar ao "exame" se tivermos um campo para isso futuramente
           }
         });
         savedFlashcards.push(saved);
@@ -130,7 +127,7 @@ ${context}`;
             options: q.options,
             correctOption: q.correctOption,
             explanation: q.explanation,
-            subject: 'Meus Materiais',
+            subject: materialTitle,
             difficulty: 'Médio',
             examId: materialExam.id
           }
