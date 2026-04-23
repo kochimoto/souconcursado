@@ -12,7 +12,8 @@ import {
   BookOpen,
   Loader2,
   Medal,
-  Target
+  Target,
+  Sparkles
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
