@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   const authUser = verifyToken(request);
   if (!authUser) return unauthorized();
-
+  
+  try {
     const { searchParams } = request.nextUrl;
     const subject = searchParams.get('subject');
     const examId = searchParams.get('examId');
