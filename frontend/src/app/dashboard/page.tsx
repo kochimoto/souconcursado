@@ -183,6 +183,28 @@ export default function Dashboard() {
             </Link>
           </div>
 
+          {/* New IA Academy Action */}
+          <Link href="/study/material" className="group block">
+            <div className="p-8 bg-gradient-to-r from-indigo-900 to-slate-900 text-white rounded-[3.5rem] hover:scale-[1.01] transition-all relative overflow-hidden shadow-2xl">
+              <Sparkles className="h-32 w-32 absolute -right-8 -bottom-8 opacity-10 rotate-12" />
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                <div className="space-y-2">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20">
+                    <Sparkles className="h-3 w-3" />
+                    Novo: IA Academy
+                  </div>
+                  <h3 className="text-3xl font-black italic uppercase tracking-tighter">Meus Materiais Inteligentes</h3>
+                  <p className="text-indigo-100/70 font-bold text-sm max-w-lg">
+                    Suba seus PDFs e gere flashcards e questões automaticamente com nossa IA de última geração.
+                  </p>
+                </div>
+                <button className="px-8 py-4 bg-white text-indigo-900 rounded-2xl font-black uppercase italic tracking-widest text-xs hover:bg-indigo-50 transition-all shrink-0 shadow-xl shadow-black/20">
+                  Subir PDF agora
+                </button>
+              </div>
+            </div>
+          </Link>
+
           {/* Ranking por Matéria */}
           <div className="p-8 bg-card border-2 rounded-[3.5rem] shadow-xl shadow-primary/5">
             <div className="flex justify-between items-center mb-8">
