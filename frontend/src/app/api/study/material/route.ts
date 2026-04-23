@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, unauthorized } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import pdf from 'pdf-parse';
+import { PDFParse } from 'pdf-parse';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // 60 seconds for AI processing
@@ -26,8 +26,10 @@ export async function POST(request: NextRequest) {
 
     // 1. Extrair texto do PDF
     const arrayBuffer = await file.arrayBuffer();
-    const pdfData = await pdf(Buffer.from(arrayBuffer));
-    const extractedText = pdfData.text.trim();
+    const parser = new PDFParse({ data: Buffer.from(arrayBuffer) });
+    await parser.load();
+    const textResult = await parser.getText();
+    const extractedText = textResult.text.trim();
 
     if (extractedText.length < 50) {
       return NextResponse.json({ message: 'Texto insuficiente no PDF para análise.' }, { status: 400 });
