@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, unauthorized } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+// @ts-ignore
 import pdf from 'pdf-parse';
 
 export const dynamic = 'force-dynamic';
