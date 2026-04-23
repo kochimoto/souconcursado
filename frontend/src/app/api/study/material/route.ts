@@ -2,19 +2,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, unauthorized } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { PDFParse } from 'pdf-parse';
+import pdf from 'pdf-parse';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // 60 seconds for AI processing
 
 export async function POST(request: NextRequest) {
+  console.log('--- Iniciando processamento de material (v1.1.1) ---');
   const authUser = verifyToken(request);
   if (!authUser) return unauthorized();
 
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const mode = formData.get('mode') || 'both'; // 'flashcards', 'questions', or 'both'
+    console.log('Arquivo recebido:', file?.name, 'Tamanho:', file?.size);
 
     if (!file) {
       return NextResponse.json({ message: 'Nenhum arquivo enviado' }, { status: 400 });
@@ -25,21 +26,26 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Extrair texto do PDF
+    console.log('Extraindo texto do PDF (stable)...');
     const arrayBuffer = await file.arrayBuffer();
-    const parser = new PDFParse({ data: Buffer.from(arrayBuffer) });
-    const textResult = await parser.getText();
-    const extractedText = textResult.text.trim();
+    const pdfData = await pdf(Buffer.from(arrayBuffer));
+    const extractedText = pdfData.text.trim();
+    console.log('Texto extraído com sucesso. Comprimento:', extractedText.length);
 
     if (extractedText.length < 50) {
       return NextResponse.json({ message: 'Texto insuficiente no PDF para análise.' }, { status: 400 });
     }
 
-    // 2. Preparar contexto (truncar se for absurdamente grande, ex: > 50k chars)
+    // 2. Preparar contexto
     const context = extractedText.substring(0, 50000);
 
     // 3. Chamar IA para gerar conteúdo
+    console.log('Chamando Groq AI...');
     const apiKey = process.env.GROQ_API_KEY?.trim();
-    if (!apiKey) throw new Error('Configuração de IA ausente.');
+    if (!apiKey) {
+      console.error('ERRO: GROQ_API_KEY não encontrada!');
+      throw new Error('Configuração de IA ausente.');
+    }
 
     const prompt = `Você é um tutor acadêmico especializado em síntese de materiais.
 Com base no texto do PDF fornecido abaixo, gere conteúdo de estudo de alta qualidade.
@@ -67,10 +73,18 @@ ${context}`;
       })
     });
 
+    if (!groqRes.ok) {
+      const errText = await groqRes.text();
+      console.error('Erro na resposta do Groq:', errText);
+      throw new Error('IA indisponível no momento.');
+    }
+
     const resData = await groqRes.json();
     const content = JSON.parse(resData.choices?.[0]?.message?.content || '{"flashcards":[], "questions":[]}');
+    console.log('Conteúdo gerado pela IA:', content.flashcards?.length, 'flashcards,', content.questions?.length, 'questões');
 
     // 4. Garantir que o "Exame" de materiais existe
+    console.log('Verificando/Criando exame de materiais...');
     let materialExam = await (prisma as any).exam.findFirst({
       where: { name: 'Meus Materiais' }
     });
@@ -88,6 +102,7 @@ ${context}`;
     }
 
     // 5. Salvar Flashcards
+    console.log('Salvando flashcards...');
     const savedFlashcards = [];
     if (content.flashcards) {
       for (const fc of content.flashcards) {
@@ -104,6 +119,7 @@ ${context}`;
     }
 
     // 6. Salvar Questões
+    console.log('Salvando questões...');
     const savedQuestions = [];
     if (content.questions) {
       for (const q of content.questions) {
@@ -122,6 +138,7 @@ ${context}`;
       }
     }
 
+    console.log('Processamento concluído com sucesso!');
     return NextResponse.json({
       message: 'Material processado com sucesso!',
       flashcardsCount: savedFlashcards.length,
@@ -130,7 +147,7 @@ ${context}`;
     });
 
   } catch (error: any) {
-    console.error('Error processing PDF:', error);
-    return NextResponse.json({ message: 'Erro ao processar PDF: ' + error.message }, { status: 500 });
+    console.error('DETALHE DO ERRO NO SERVIDOR:', error);
+    return NextResponse.json({ message: 'Erro ao processar PDF: ' + (error.message || 'Erro interno') }, { status: 500 });
   }
 }

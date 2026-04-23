@@ -51,18 +51,22 @@ export default function MaterialPage() {
     formData.append("file", file);
 
     try {
-      // Pequeno delay fake para UX
-      setTimeout(() => setStep("analyzing"), 1500);
-
+      // Começamos o upload
       const response = await api.post("/study/material", formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.progress && progressEvent.progress > 0.9) {
+             setStep("analyzing");
+          }
+        }
       });
 
       setResult(response.data);
       setStep("success");
     } catch (err: any) {
-      console.error(err);
-      setError(err.response?.data?.message || "Erro ao processar material.");
+      console.error("Erro no upload:", err);
+      const msg = err.response?.data?.message || "O servidor demorou muito para responder ou o arquivo é incompatível.";
+      setError(msg);
       setStep("idle");
     } finally {
       setLoading(false);
