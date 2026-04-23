@@ -23,9 +23,10 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [subjectStats, setSubjectStats] = useState<any[]>([]);
-  const [plans, setPlans] = useState<any[]>([]);
-  const [profile, setProfile] = useState<any>(null);
   const [materials, setMaterials] = useState<any[]>([]);
+  const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const [overallStats, setOverallStats] = useState({
     solved: 0,
     accuracy: 0,
@@ -103,7 +104,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in relative">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -202,9 +203,9 @@ export default function Dashboard() {
                     Suba seus PDFs e gere flashcards e questões automaticamente com nossa IA de última geração.
                   </p>
                 </div>
-                <button className="px-8 py-4 bg-white text-indigo-900 rounded-2xl font-black uppercase italic tracking-widest text-xs hover:bg-indigo-50 transition-all shrink-0 shadow-xl shadow-black/20">
+                <div className="px-8 py-4 bg-white text-indigo-900 rounded-2xl font-black uppercase italic tracking-widest text-xs hover:bg-indigo-50 transition-all shrink-0 shadow-xl shadow-black/20">
                   Subir PDF agora
-                </button>
+                </div>
               </div>
             </div>
           </Link>
@@ -302,17 +303,22 @@ export default function Dashboard() {
             </h3>
             <div className="space-y-4">
               {materials.length > 0 ? materials.map((material: any) => (
-                <Link href={`/study/questions?subject=${material.name.replace('Material: ', '')}&examId=${material.id}`} key={material.id}>
-                  <div className="group p-4 bg-indigo-500/5 rounded-2xl border border-transparent hover:border-indigo-500/20 transition-all cursor-pointer flex justify-between items-center">
-                    <div className="flex flex-col gap-1 overflow-hidden">
-                      <span className="text-xs font-black uppercase tracking-tight truncate pr-4">{material.name.replace('Material: ', '')}</span>
-                      <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Estudar agora</span>
-                    </div>
-                    <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 group-hover:text-white transition-all">
-                      <ArrowRight className="h-3 w-3" />
-                    </div>
+                <div 
+                  key={material.id}
+                  onClick={() => {
+                    setSelectedMaterial(material);
+                    setIsModalOpen(true);
+                  }}
+                  className="group p-4 bg-indigo-500/5 rounded-2xl border border-transparent hover:border-indigo-500/20 transition-all cursor-pointer flex justify-between items-center"
+                >
+                  <div className="flex flex-col gap-1 overflow-hidden">
+                    <span className="text-xs font-black uppercase tracking-tight truncate pr-4">{material.name.replace('Material: ', '')}</span>
+                    <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Abrir opções</span>
                   </div>
-                </Link>
+                  <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0 group-hover:bg-indigo-500 group-hover:text-white transition-all">
+                    <ArrowRight className="h-3 w-3" />
+                  </div>
+                </div>
               )) : (
                 <p className="text-[10px] text-muted-foreground font-bold italic text-center py-4">Nenhum material processado.</p>
               )}
@@ -336,6 +342,80 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Material Selection Modal */}
+      <AnimatePresence>
+        {isModalOpen && selectedMaterial && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+              onClick={() => setIsModalOpen(false)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-card border-4 border-indigo-500/20 rounded-[3rem] p-8 md:p-12 shadow-2xl space-y-8"
+            >
+              <div className="space-y-2 text-center">
+                <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="h-8 w-8 text-indigo-600" />
+                </div>
+                <h3 className="text-2xl font-black italic uppercase tracking-tighter">
+                  {selectedMaterial.name.replace('Material: ', '')}
+                </h3>
+                <p className="text-muted-foreground font-bold text-xs uppercase tracking-widest">
+                  Como você quer estudar hoje?
+                </p>
+              </div>
+
+              <div className="grid gap-4">
+                <Link 
+                  href={`/study/questions?subject=${selectedMaterial.name.replace('Material: ', '')}&examId=${selectedMaterial.id}`}
+                  className="group p-6 bg-primary text-primary-foreground rounded-[2rem] hover:scale-[1.02] transition-all flex items-center justify-between shadow-xl shadow-primary/20"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                      <BookOpen className="h-6 w-6" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-black italic uppercase tracking-tight">Praticar Questões</p>
+                      <p className="text-[10px] font-bold opacity-70">Treine com o conteúdo do PDF</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all" />
+                </Link>
+
+                <Link 
+                  href="/study/flashcards"
+                  className="group p-6 bg-card border-2 border-indigo-500 text-indigo-600 rounded-[2rem] hover:scale-[1.02] transition-all flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center">
+                      <Zap className="h-6 w-6" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-black italic uppercase tracking-tight">Flashcards</p>
+                      <p className="text-[10px] font-bold opacity-70">Memorização rápida e eficiente</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all" />
+                </Link>
+              </div>
+
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="w-full text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] hover:text-primary transition-colors"
+              >
+                Fechar
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
