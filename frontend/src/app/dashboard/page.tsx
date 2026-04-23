@@ -23,6 +23,8 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [subjectStats, setSubjectStats] = useState<any[]>([]);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
   const [materials, setMaterials] = useState<any[]>([]);
   const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
