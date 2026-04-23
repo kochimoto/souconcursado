@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, XCircle, Info, ArrowRight, BookOpen, Clock, Loader2, Sparkles } from "lucide-react";
+import { CheckCircle2, XCircle, Info, ArrowRight, BookOpen, Clock, Loader2, Sparkles, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 
@@ -85,31 +85,26 @@ export default function StudyPage() {
     setShowExplanation(false);
 
     try {
-      const useAI = forceAI || isAIMode || subtopic !== "";
-
-      if (!useAI) {
-        const response = await api.get('/questions', {
-          params: { subject: sub, limit: 1 },
-        });
-
-        if (response.data && response.data.length > 0) {
-          setQuestion(response.data[0]);
-          setLoading(false);
-          return;
-        }
-        setIsAIMode(true);
-      }
+      const useAI = forceAI || isAIMode;
 
       const response = await api.get('/questions/adaptive', {
         params: { 
           topic: sub, 
           level: stats?.currentLevel || 1,
-          subtopic: subtopic
+          subtopic: subtopic,
+          useAI: useAI
         },
       });
       setQuestion(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao carregar questão:', error);
+      if (error.response?.status === 404) {
+        setQuestion({ 
+          error: true, 
+          message: error.response.data.message || "Fim das questões nesta categoria.",
+          needsAI: error.response.data.needsAI
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -145,6 +140,42 @@ export default function StudyPage() {
   }
 
 
+
+  if (question?.error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 gap-6 max-w-lg mx-auto">
+        <div className="w-20 h-20 bg-yellow-500/10 rounded-full flex items-center justify-center">
+          <AlertCircle className="h-10 w-10 text-yellow-600" />
+        </div>
+        <div className="space-y-2">
+          <p className="text-xl font-bold uppercase italic tracking-tighter">Biblioteca Esgotada</p>
+          <p className="text-muted-foreground font-medium italic">
+            Não encontramos mais questões de <span className="text-primary">{subtopicParam || subjectParam}</span> na nossa biblioteca oficial.
+          </p>
+        </div>
+        
+        {question.needsAI && (
+          <div className="p-6 bg-indigo-600/5 border-2 border-indigo-600/10 rounded-3xl space-y-4">
+            <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">Deseja que a nossa IA gere questões inéditas para você continuar estudando este tópico?</p>
+            <button 
+              onClick={() => {
+                setIsAIMode(true);
+                fetchQuestion(subjectParam, true, subtopicParam);
+              }}
+              className="w-full flex items-center justify-center gap-2 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase italic tracking-widest text-xs shadow-xl shadow-indigo-500/20 hover:scale-[1.02] transition-all"
+            >
+              <Sparkles className="h-4 w-4" />
+              Ativar IA e Gerar Questão
+            </button>
+          </div>
+        )}
+        
+        <Link href="/dashboard" className="text-xs font-bold text-muted-foreground underline uppercase tracking-widest hover:text-primary transition-colors">
+          Voltar ao Dashboard
+        </Link>
+      </div>
+    );
+  }
 
   if (!question && !isMetaConcluida) {
     return (
