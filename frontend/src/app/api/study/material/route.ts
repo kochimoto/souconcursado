@@ -27,7 +27,6 @@ export async function POST(request: NextRequest) {
     // 1. Extrair texto do PDF
     const arrayBuffer = await file.arrayBuffer();
     const parser = new PDFParse({ data: Buffer.from(arrayBuffer) });
-    await parser.load();
     const textResult = await parser.getText();
     const extractedText = textResult.text.trim();
 
