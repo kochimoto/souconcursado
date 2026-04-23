@@ -231,7 +231,7 @@ export default function StudyPlanDetails({ params }: { params: Promise<{ planId:
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <Link href={`/study/questions?subject=${block.subject}&difficulty=${block.difficulty}`}>
+                    <Link href={`/study/questions?subject=${block.subject}&difficulty=${block.difficulty}&examId=${plan.examId}`}>
                       <button className="flex-1 md:flex-none px-8 py-3 bg-primary text-primary-foreground rounded-2xl text-xs font-black uppercase italic tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all">
                         Estudar Agora
                       </button>
@@ -254,7 +254,7 @@ export default function StudyPlanDetails({ params }: { params: Promise<{ planId:
                         {subtopics.map((topic, idx) => (
                           <Link 
                             key={idx} 
-                            href={`/study/questions?subject=${block.subject}&subtopic=${topic}&difficulty=${block.difficulty}`}
+                            href={`/study/questions?subject=${block.subject}&subtopic=${topic}&difficulty=${block.difficulty}&examId=${plan.examId}`}
                             className="flex items-center gap-3 p-3 bg-muted/30 rounded-2xl border-2 border-transparent hover:border-primary/20 hover:bg-muted/50 transition-all group"
                           >
                             <div className="w-2 h-2 rounded-full bg-primary/30 group-hover:bg-primary transition-colors" />

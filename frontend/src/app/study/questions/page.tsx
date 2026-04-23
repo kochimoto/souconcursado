@@ -24,6 +24,7 @@ export default function StudyPage() {
   const [stats, setStats] = useState<any>(null);
   const [subjectParam, setSubjectParam] = useState("");
   const [subtopicParam, setSubtopicParam] = useState("");
+  const [examIdParam, setExamIdParam] = useState("");
   const [showTimerModal, setShowTimerModal] = useState(true);
   const [targetMinutes, setTargetMinutes] = useState(30);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -62,9 +63,11 @@ export default function StudyPage() {
     const urlParams = new URLSearchParams(window.location.search);
     const sub = urlParams.get('subject') || 'Direito Constitucional';
     const subtopic = urlParams.get('subtopic') || "";
+    const examId = urlParams.get('examId') || "";
     setSubjectParam(sub);
     setSubtopicParam(subtopic);
-    fetchQuestion(sub, false, subtopic);
+    setExamIdParam(examId);
+    fetchQuestion(sub, false, subtopic, examId);
     fetchStats(sub);
   }, []);
 
@@ -78,7 +81,12 @@ export default function StudyPage() {
     }
   };
 
-  const fetchQuestion = async (sub: string = subjectParam, forceAI = false, subtopic: string = subtopicParam) => {
+  const fetchQuestion = async (
+    sub: string = subjectParam, 
+    forceAI = false, 
+    subtopic: string = subtopicParam,
+    examId: string = examIdParam
+  ) => {
     setLoading(true);
     setQuestion(null);
     setSelectedOption(null);
@@ -93,6 +101,7 @@ export default function StudyPage() {
           topic: sub, 
           level: stats?.currentLevel || 1,
           subtopic: subtopic,
+          examId: examId,
           useAI: useAI
         },
       });
