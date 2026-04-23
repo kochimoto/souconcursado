@@ -377,20 +377,44 @@ export default function StudyPage() {
           <span className="inline-block px-3 py-1 mb-4 text-[10px] font-bold uppercase tracking-widest bg-muted rounded-full">
             Questão {question.id.split('-')[0].toUpperCase()}
           </span>
-          <p className="text-lg md:text-xl font-medium leading-relaxed whitespace-pre-wrap">{question.text}</p>
+          
+          <div className="space-y-6">
+            {question.text.split(/(!\[.*?\]\(.*?\))/g).map((part: string, i: number) => {
+              const match = part.match(/!\[.*?\]\((.*?)\)/);
+              if (match) {
+                return (
+                  <div key={i} className="relative rounded-2xl overflow-hidden border-2 border-muted my-4">
+                    <img 
+                      src={match[1]} 
+                      alt="Imagem da questão"
+                      className="w-full h-auto object-contain max-h-[500px]"
+                    />
+                  </div>
+                );
+              }
+              return (
+                <p key={i} className="text-lg md:text-xl font-medium leading-relaxed whitespace-pre-wrap">
+                  {part}
+                </p>
+              );
+            })}
+          </div>
           
           {question.files && Array.isArray(question.files) && question.files.length > 0 && (
             <div className="grid gap-4 mt-6">
-              {(question.files as string[]).map((url, idx) => (
-                <div key={idx} className="relative rounded-2xl overflow-hidden border-2 border-muted group">
-                  <img 
-                    src={url} 
-                    alt={`Imagem da questão ${idx + 1}`}
-                    className="w-full h-auto object-contain max-h-[500px] hover:scale-[1.02] transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                </div>
-              ))}
+              {(question.files as string[]).map((url, idx) => {
+                // Evita duplicar se já foi extraído do texto via regex
+                if (question.text.includes(url)) return null;
+                return (
+                  <div key={idx} className="relative rounded-2xl overflow-hidden border-2 border-muted group">
+                    <img 
+                      src={url} 
+                      alt={`Imagem complementar ${idx + 1}`}
+                      className="w-full h-auto object-contain max-h-[500px] hover:scale-[1.02] transition-transform duration-500"
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
