@@ -77,7 +77,7 @@ ${context}`;
     if (!groqRes.ok) {
       const errText = await groqRes.text();
       console.error('Erro na resposta do Groq:', errText);
-      throw new Error('IA indisponível no momento.');
+      throw new Error(`Erro na IA (${groqRes.status}): ${errText.substring(0, 100)}`);
     }
 
     const resData = await groqRes.json();
