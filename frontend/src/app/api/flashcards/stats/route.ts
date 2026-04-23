@@ -9,19 +9,31 @@ export async function GET(request: NextRequest) {
   const authUser = verifyToken(request);
   if (!authUser) return unauthorized();
 
-  try {
+    const { searchParams } = request.nextUrl;
+    const subject = searchParams.get('subject');
+    const examId = searchParams.get('examId');
+
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    console.log(`[Stats] Buscando stats para user: ${authUser.id}`);
+    console.log(`[Stats] Buscando stats para user: ${authUser.id} subject: ${subject}`);
 
     // @ts-ignore
     const todayReviews = await prisma.flashcard.count({
-      where: { userId: authUser.id, lastReviewedAt: { gte: startOfDay } },
+      where: { 
+        userId: authUser.id, 
+        lastReviewedAt: { gte: startOfDay },
+        ...(subject && { subject }),
+        ...(examId && { examId }),
+      },
     });
     // @ts-ignore
     const totalCards = await prisma.flashcard.count({
-      where: { userId: authUser.id },
+      where: { 
+        userId: authUser.id,
+        ...(subject && { subject }),
+        ...(examId && { examId }),
+      },
     });
 
     // Busca resumo por matéria (agrupado)
@@ -29,7 +41,9 @@ export async function GET(request: NextRequest) {
     const allDueCards = await prisma.flashcard.findMany({
       where: {
         userId: authUser.id,
-        nextReview: { lte: new Date() }
+        nextReview: { lte: new Date() },
+        ...(subject && { subject }),
+        ...(examId && { examId }),
       },
       select: { 
         id: true,

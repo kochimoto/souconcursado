@@ -16,7 +16,9 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    console.log('Arquivo recebido:', file?.name, 'Tamanho:', file?.size);
+    const flashcardCount = formData.get('flashcardCount') || '8';
+    const questionCount = formData.get('questionCount') || '5';
+    console.log('Arquivo recebido:', file?.name, 'Tamanho:', file?.size, 'FC:', flashcardCount, 'Q:', questionCount);
 
     if (!file) {
       return NextResponse.json({ message: 'Nenhum arquivo enviado' }, { status: 400 });
@@ -52,8 +54,8 @@ export async function POST(request: NextRequest) {
 Com base no texto do PDF fornecido abaixo, gere conteúdo de estudo de alta qualidade.
 
 REGRAS:
-1. Gere até 8 flashcards (Frente/Verso).
-2. Gere até 5 questões de múltipla escolha com 4 opções e explicação.
+1. Gere EXATAMENTE ${flashcardCount} flashcards (Frente/Verso).
+2. Gere EXATAMENTE ${questionCount} questões de múltipla escolha com 4 opções e explicação.
 3. Use o idioma Português (Brasil).
 4. Retorne APENAS um JSON no formato:
 {

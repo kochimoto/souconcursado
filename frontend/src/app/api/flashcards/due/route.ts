@@ -9,17 +9,22 @@ export async function GET(request: NextRequest) {
   const authUser = verifyToken(request);
   if (!authUser) return unauthorized();
 
-  try {
+    const { searchParams } = request.nextUrl;
+    const subject = searchParams.get('subject');
+    const examId = searchParams.get('examId');
+
     const now = new Date();
     const bufferTime = new Date(now.getTime() + 300000); 
     
-    console.log(`[Due] Buscando cards para user: ${authUser.id} até ${bufferTime.toISOString()}`);
+    console.log(`[Due] Buscando cards para user: ${authUser.id} subject: ${subject} exam: ${examId}`);
 
     // @ts-ignore
     const flashcards = await prisma.flashcard.findMany({
       where: {
         userId: authUser.id,
         nextReview: { lte: bufferTime },
+        ...(subject && { subject }),
+        ...(examId && { examId }),
       },
       include: { question: true },
       orderBy: { nextReview: 'asc' },

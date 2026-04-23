@@ -25,6 +25,7 @@ export default function MaterialPage() {
   const [step, setStep] = useState<"idle" | "uploading" | "analyzing" | "success">("idle");
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [counts, setCounts] = useState({ flashcards: 8, questions: 5 });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -49,6 +50,8 @@ export default function MaterialPage() {
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("flashcardCount", counts.flashcards.toString());
+    formData.append("questionCount", counts.questions.toString());
 
     try {
       // Começamos o upload
@@ -136,15 +139,61 @@ export default function MaterialPage() {
             </div>
 
             {file && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.9 }}
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                onClick={handleUpload}
-                className="w-full py-6 bg-primary text-primary-foreground rounded-3xl font-black uppercase italic tracking-widest text-lg shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+                className="p-8 bg-card border-2 rounded-[2.5rem] shadow-xl space-y-8"
               >
-                Começar Análise Inteligente
-                <Sparkles className="h-5 w-5" />
-              </motion.button>
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-black uppercase tracking-widest text-indigo-600 flex items-center gap-2">
+                        <Layers className="h-3 w-3" />
+                        Flashcards
+                      </label>
+                      <span className="text-xl font-black italic">{counts.flashcards}</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="5" 
+                      max="20" 
+                      value={counts.flashcards}
+                      onChange={(e) => setCounts({...counts, flashcards: parseInt(e.target.value)})}
+                      className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-indigo-600"
+                    />
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight text-center">Quantos cartões de memória você deseja?</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-black uppercase tracking-widest text-blue-600 flex items-center gap-2">
+                        <BookOpen className="h-3 w-3" />
+                        Questões
+                      </label>
+                      <span className="text-xl font-black italic">{counts.questions}</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="3" 
+                      max="15" 
+                      value={counts.questions}
+                      onChange={(e) => setCounts({...counts, questions: parseInt(e.target.value)})}
+                      className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-blue-600"
+                    />
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight text-center">Quantas questões de múltipla escolha?</p>
+                  </div>
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleUpload}
+                  className="w-full py-6 bg-primary text-primary-foreground rounded-3xl font-black uppercase italic tracking-widest text-lg shadow-2xl shadow-primary/20 transition-all flex items-center justify-center gap-3"
+                >
+                  Começar Análise Inteligente
+                  <Sparkles className="h-5 w-5" />
+                </motion.button>
+              </motion.div>
             )}
           </motion.div>
         )}

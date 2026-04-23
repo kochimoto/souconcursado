@@ -57,9 +57,13 @@ export default function FlashcardsPage() {
   const fetchInitialData = async () => {
     setLoading(true);
     try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const subject = searchParams.get('subject');
+      const examId = searchParams.get('examId');
+
       const [dueRes, statsRes] = await Promise.all([
-        api.get("/flashcards/due"),
-        api.get("/flashcards/stats")
+        api.get("/flashcards/due", { params: { subject, examId } }),
+        api.get("/flashcards/stats", { params: { subject, examId } })
       ]);
       setCards(dueRes.data);
       setStats(statsRes.data);
@@ -73,7 +77,11 @@ export default function FlashcardsPage() {
   const fetchExtraCards = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/flashcards/all");
+      const searchParams = new URLSearchParams(window.location.search);
+      const subject = searchParams.get('subject');
+      const examId = searchParams.get('examId');
+
+      const response = await api.get("/flashcards/all", { params: { subject, examId } });
       setCards(response.data.slice(0, 30)); 
       setSessionFinished(false);
       setCurrentCardIdx(0);
